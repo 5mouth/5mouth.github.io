@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+<title>IPSec VPN 报文介绍以及协商建立过程 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ipsec-vpn-报文介绍以及协商建立过程">IPSec VPN 报文介绍以及协商建立过程</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#ipsec-vpn-报文介绍以及协商建立过程">IPSec VPN 报文介绍以及协商建立过程</a><ul>
+<li><a href="#介绍">介绍</a></li>
+<li><a href="#isakmp报文介绍">ISAKMP报文介绍</a></li>
+<li><a href="#ipsec-vpn协商建立过程">IPSec VPN协商建立过程</a><ul>
+<li><a href="#主模式main-mode">主模式（Main mode）</a><ul>
+<li><a href="#主模式第1个和第2个数据包">主模式第1个和第2个数据包</a></li>
+<li><a href="#主模式第3个和第4个数据包">主模式第3个和第4个数据包</a></li>
+<li><a href="#主模式第5个和第6个数据包">主模式第5个和第6个数据包</a></li>
+</ul>
+</li>
+<li><a href="#快速模式quick-mode">快速模式（Quick mode）</a></li>
+</ul>
+</li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<ol>
+<li>ISAKMP报文介绍</li>
+<li>IPSec VPN协商建立过程（IKEv1）</li>
+</ol>
+
+
+
+<h2 id="isakmp报文介绍">ISAKMP报文介绍</h2>
+
+<p>ISAKMP头部信息如下。</p>
+
+<p><img src="https://lh3.googleusercontent.com/--qQohXoc9UQ/WeB9Gq1oSvI/AAAAAAAAC60/n_gsPGz5jeMoSpgefiJI2wIBoSKTC6yNACLcBGAs/s0/isakmp+%25E5%25A4%25B4%25E9%2583%25A8.jpg" alt="enter image description here" title="isakmp 头部.jpg"></p>
+
+<p><strong>Nitiator Cookie（Initiator SPI）(8 octets)：</strong>发起SA建立实体Cookie，SA通知或SA删除 <br>
+<strong>Responder Cookie（Responder SPI）(8 octets)：</strong>响应SA建立请求的实体的Cookie，SA通知或SA删除 <br>
+<strong>Next Payload (1 octet)：</strong>表示第一有效负荷的消息中的类型</p>
+
+<pre><code> Next Payload Type           Value
+ NONE                        0
+ Security Association (SA)   1
+ Proposal (P)                2
+ Transform (T)               3
+ Key Exchange (KE)           4
+ Identification (ID)         5
+ Certificate (CERT)          6
+ Certificate Request (CR)    7
+ Hash (HASH)                 8
+ Signature (SIG)             9
+ Nonce (NONCE)               10
+ Notification (N)            11
+ Delete (D)                  12
+ Vendor ID (VID)             13
+ RESERVED                    14 - 127
+ Private USE                 128 - 255
+</code></pre>
+
+<p><strong>Major Version (4 bits)：</strong>标识正在使用的ISAKMP协议的主要版本。 <br>
+<strong>Minor Version (4 bits)：</strong>标识正在使用的ISAKMP协议的次要版本 <br>
+<strong>Exchange Type(1 octet)：</strong>标识使用的交换（exchange） 的类型</p>
+
+<pre><code> Exchange Type          Value
+ NONE                   0
+ Base                   1
+ Identity Protection    2 
+ Authentication Only    3
+ Aggressive             4
+ Informational          5
+ ISAKMP Future Use      6 - 31
+ DOI Specific Use       32 - 239
+ Private Use            240 - 255
+</code></pre>
+
+<p><strong>Flags (1 octet)：</strong>标识为ISAKMP交换设置的特定选项 <br>
+··· <strong>E(ncryption Bit) (1 bit)：</strong>如果设置（1），则使用在ISAKMP SA中标识的加密算法对报头之后的所有有效载荷进行加密。对于第4.1节中描述的所有ISAKMP交换，加密应该在双方交换密钥交换有效载荷之后开始。 如果E（ncryption Bit）未设置（0），则有效载荷不加密。 <br>
+···<strong>C(ommit Bit) (1 bit) ：</strong>该位用于通知密钥交换同步。它用于确保在完成SA建立之前没有接收到加密材料。这个bit可以在双方任意一端设置，并且在isakmp建立的两个阶段上均可以使用。这个值必须在第一阶段协商完成之后复位。 <br>
+···<strong>A(uthentication Only Bit) (1 bit) ：</strong>需要和Notify Payload一起使用，具有完整性检查，但是没有加密的信息传输。第4.8节规定，第二阶段信息交换必须在ISAKMP SA的保护下发送。 这是该策略的唯一例外。如果设置了Authentication Only位（1），那么只有认证安全服务将应用于信息交换的整个Notify有效负载，并且有效负载不会被加密。</p>
+
+<p><strong>Length (4 octets)：</strong>以八位字节为单位的消息总长（报头+有效载荷）。 加密可以扩展ISAKMP消息的大小。</p>
+
+<p>在ISAKM中可以添加一个或多个有效负载（Payloads），由于负载较多就不一一列举了，具体详见RFC2408。</p>
+
+<p><img src="https://lh3.googleusercontent.com/--VZW2zRAing/WeB-JshdH5I/AAAAAAAAC7E/UVmfl3ExkVYk6oX1HWasJciiEGalA9sFQCLcBGAs/s0/isakmp+%25E5%25A4%25B4%25E9%2583%25A82.jpg" alt="enter image description here" title="isakmp 头部2.jpg"></p>
+
+
+
+<h2 id="ipsec-vpn协商建立过程">IPSec VPN协商建立过程</h2>
+
+<p>建立过程主要分为两步，首先是主模式（Main mode）的建立，然后是快速模式（Quick mode）的建立。</p>
+
+<p><img src="https://lh3.googleusercontent.com/-S3rRsgECbao/WeB-TssRNEI/AAAAAAAAC7M/P1SUzqHNUyAsv2dgD6WVl4G2nAvlRFCnwCLcBGAs/s0/ipsec+vpn+%25E5%25BB%25BA%25E7%25AB%258B.jpg" alt="enter image description here" title="ipsec vpn 建立.jpg"></p>
+
+<p><img src="https://lh3.googleusercontent.com/-DzrgrFvdLbQ/WeB-b7iuOgI/AAAAAAAAC7U/FDU2kgvrc2Y8HLb1BGN6OapDm2U3GqI4gCLcBGAs/s0/%25E5%25B1%258F%25E5%25B9%2595%25E5%25BF%25AB%25E7%2585%25A7+2016-12-02+19.31.38.png" alt="enter image description here" title="屏幕快照 2016-12-02 19.31.38.png"></p>
+
+<p><a href="https://drive.google.com/file/d/0B93yYDHcYIgCeUs5U0ZZYmxteGM/view?usp=sharing">数据包在此下载。</a></p>
+
+<p>之前IPSec vpn谈到过，VPN的目的就是为了保证私密性、完整性、源认证。然而在公网上显然不能将加密信息明目张胆的发送出去，所以在传递这些业务信息之前，需要预先建立起一个安全可靠的连接来传递这些加解密的信息。而主模式就是预先建立的这个连接。</p>
+
+
+
+<h3 id="主模式main-mode">主模式（Main mode）</h3>
+
+<p>主模式主要的目的是建立ISAKMP SA（Internet Security Association and Key Management Protocol  Security association）。为了建立起ISAKMP SA，在IKEv1 Main mode 中需要交互6个报文。这6个报文会在下面有所介绍。由于ISAKMP的建立并不像OSPF邻居认证一样，只需要password正确就能建立，而是有一整套协商的条件。所以单一的预共享密钥相同也不一定就能保证ISAKMP的建立。</p>
+
+
+
+<h4 id="主模式第1个和第2个数据包">主模式第1个和第2个数据包</h4>
+
+<p>主模式的第一个和第二个数据包主要用来协商ISAKMP策略信息，这些策略信息包括。 <br>
+· 加密类型（Encryption-Algorithm） <br>
+· 密钥长度（Key-Length） <br>
+· 散列算法（Hash-Algorithm） <br>
+· DH强度（Group-Description） <br>
+· 认证模式（Authentication-Method） <br>
+· 密钥更新时间单位（Life-Type） <br>
+· 密钥时间（Life-Time） <br>
+  如上部分在报文中体现如下，如果对端发送过来的ISAKMP协商信息与本地信息不符，那么将协商失败，且不会反馈本端ISAKMP配置信息。</p>
+
+<p><img src="https://lh3.googleusercontent.com/-qj3IruEVyoI/WeB-5VGiRQI/AAAAAAAAC7g/1vU3IDtemTQE52x5hgoeJA067ZWU_2ajwCLcBGAs/s0/1.jpg" alt="enter image description here" title="1.jpg"></p>
+
+
+
+<h4 id="主模式第3个和第4个数据包">主模式第3个和第4个数据包</h4>
+
+<p>第1和第2个数据包确认了策略之后和散列函数之后，要想加密数据还需要一个关键的参数（密钥），这个密钥正是通过DH交换而得来的。有关DH算法工作原理已超出笔者能力，有兴趣的可以参见。<a href="https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange">Diffie–Hellman key exchange</a>，<a href="https://tools.ietf.org/html/rfc2631">Diffie-Hellman Key Agreement Method</a>。 <br>
+在报文中体现如下。</p>
+
+<p><img src="https://lh3.googleusercontent.com/-yeTrKlJ-CnI/WeB_PVcYhhI/AAAAAAAAC7w/XtqB1ht9CFEs42Z6WVxO5q2SP8q8XtQeQCLcBGAs/s0/2.jpg" alt="enter image description here" title="2.jpg"></p>
+
+
+
+<h4 id="主模式第5个和第6个数据包">主模式第5个和第6个数据包</h4>
+
+<p>获取到彼此的密钥信息之后，就可以开始进行认证了，这部分就是加密的报文。</p>
+
+<p><img src="https://lh3.googleusercontent.com/-5Nue-Kv70S0/WeB_aXlQUpI/AAAAAAAAC8A/pTgw8kw88RYSZLfLkhmPUgelkxd_isp9ACLcBGAs/s0/3.jpg" alt="enter image description here" title="3.jpg"></p>
+
+<p>总的来说，主模式首先协商ISAKMP策略，确定双方策略一致的时候，开始使用非对称密钥算法来交换彼此的预共享密钥，当预共享密钥匹配的时候来交换彼此的加密密钥，使用这个加密的密钥来完成第5和第6的数据包的认证功能。这样就保证了私密性（数据加密），源认证（加密认证来实现），完整性（如果报文有修改ISAKMP SA无法建立）</p>
+
+
+
+<h3 id="快速模式quick-mode">快速模式（Quick mode）</h3>
+
+<p>在快速模式下主要用来建立IPSec SA，协商以下参数 <br>
+· 封装方式（ESP或AH） <br>
+· 认证算法 <br>
+· 传输模式（隧道模式或传输模式） <br>
+· 加密算法（业务报文的加密算法） <br>
+· DH信息 <br>
+· IPSec生命周期信息 <br>
+另外需要注意的就是密钥更新，密钥更新主要使用的是PSF，虽然 有周期性更新密钥的这个功能，但是如果没有启用PSF那么新生成的密钥与之前的密钥存在衍生关系，思科默认没有启用PSF功能，如果启用了PSF那么新生成的密钥与之前的密钥就不存在衍生关系，可以提供更安全的服务。 <br>
+这一部分在报文中均以加密方式进行显示。</p>
+
+<p><img src="https://lh3.googleusercontent.com/-7f-UjvpGMNE/WeB_ndusafI/AAAAAAAAC8I/TVV9aQPMy40ZQ1DOcKTUbUMpT2X0eknggCLcBGAs/s0/4.jpg" alt="enter image description here" title="4.jpg"></p>
+
+<p>快速模式协商完成之后，建立起IPSec SA，开始传输加密数据。</p>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li><a href="https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange">Diffie–Hellman key exchange</a></li>
+<li><a href="https://tools.ietf.org/html/rfc2631">Diffie-Hellman Key Agreement Method</a></li>
+<li><a href="https://www.ibm.com/support/knowledgecenter/SSLTBW_1.13.0/com.ibm.zos.r13.hald001/f1a1c5b1221.htm">Phase 1</a>、<a href="https://www.ibm.com/support/knowledgecenter/SSLTBW_1.13.0/com.ibm.zos.r13.hald001/f1a1c5b1222.htm">Phase 2</a></li>
+<li><a href="http://flylib.com/books/en/2.45.1.26/1/">IPSec Virtual Private Network Fundamentals–IKE and ISAKMP</a></li>
+<li><a href="https://tools.ietf.org/html/rfc2408">RFC2408</a></li>
+<li><a href="https://tools.ietf.org/html/rfc2409">RFC2409</a></li>
+<li><a href="https://tools.ietf.org/html/rfc4306">RFC4306</a></li>
+</ol>
+
+<p><em>2017年10月13日更新</em></p></div></body>
+</html>

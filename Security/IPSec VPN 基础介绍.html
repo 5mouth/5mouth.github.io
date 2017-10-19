@@ -1,0 +1,352 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+<title>IPSec VPN 基础介绍 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ipsec-vpn-基础介绍">IPSec VPN 基础介绍</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#ipsec-vpn-基础介绍">IPSec VPN 基础介绍</a><ul>
+<li><a href="#介绍">介绍</a></li>
+<li><a href="#vpn基础概念">VPN基础概念</a></li>
+<li><a href="#ipsec-vpn框架">IPSec VPN框架</a><ul>
+<li><a href="#加密和认证">加密和认证</a></li>
+<li><a href="#封装协议和传输模式">封装协议和传输模式</a></li>
+<li><a href="#传输模式和隧道模式">传输模式和隧道模式</a></li>
+<li><a href="#密钥有效期">密钥有效期</a></li>
+</ul>
+</li>
+<li><a href="#esp封装方式和传输模式介绍">ESP封装方式和传输模式介绍</a><ul>
+<li><a href="#配置">配置：</a></li>
+</ul>
+</li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<ol>
+<li>vpn基础概念</li>
+<li>ipsec vpn框架</li>
+<li>ESP封装方式和传输模式介绍</li>
+</ol>
+
+
+
+<h2 id="vpn基础概念">VPN基础概念</h2>
+
+<p>虚拟专用网（英语：Virtual Private Network，简称VPN），是一种常用于连接中、大型企业或团体与团体间的私人网络的通讯方法。虚拟私人网络的讯息透过公用的网络架构（例如：互联网）来传送内联网的网络讯息。vpn分为远程接入vpn和站点到站点vpn。</p>
+
+<p>· 远程接入：通常是终端连接到公司网关，访问公司内部网络。 <br>
+· 站点到站点：通常是网关和网关之间建立vpn隧道，使其从一个站点到另外一个站点通信，好似在同一个内网中一样。</p>
+
+<p>远程接入的vpn种类有：ipsec vpn、PPTP、SSL、L2TP+ipsec。 <br>
+站点到站点的vpn种类有：ipsec vpn、GRE tunnel、帧中继、MPLS VPN。</p>
+
+<p>由于需要使用公网进行数据传输，那么为了保证数据的安全。我们至少需要保障： <br>
+·私密性：传递的数据包经过加密。 <br>
+·完整性：数据在传递的过程中没有被修改。 <br>
+·源认证：数据是可信任的源传递给我。</p>
+
+<p><img src="https://lh3.googleusercontent.com/-GohRlxDbi94/Wd8E9ht22gI/AAAAAAAAAic/jQ_FJcSKaMszWuznCL6TVJX9fTXPFBt5wCLcBGAs/s0/ipsec+%25281%2529.jpg" alt="enter image description here" title="ipsec (1).jpg"></p>
+
+
+
+<h2 id="ipsec-vpn框架">IPSec VPN框架</h2>
+
+<p>ipsec框架包括，加密、认证（验证）、封装协议、传输模式、密钥有效期。</p>
+
+
+
+<h3 id="加密和认证">加密和认证</h3>
+
+<p>既然在公网上传输需要解决。私密性、完整性、源认证。那么我们来看看ipsec vpn如何解决这些问题呢？</p>
+
+<p>私密性，私密性固然可见。就是希望传输的数据不是明文，而是经过加密之后的。然而这就涉及到一个加解密的概念。我们先谈加密，在加密算法中，分为两种一种是对称密钥。另外一种是非对称密钥。</p>
+
+<p>对称密钥，加密和解密都是同样的密钥。例如传递数据“123”，使用密钥A’， 加密后的结果“abc”，对方收到“abc”加密文件之后自然要 使用密钥A’去解码“abc”才能得到想要的数据。那么问题来了，如何才能安全的分发密钥就成了关键。</p>
+
+<p>非对称密钥，非对称密钥分为公钥和私钥。公钥用于加密数据，私钥用于解密数据，但是公钥无法对数据进行解密。由于共钥和私钥是一种不可逆的关系，所以公钥可以随意发放给任何人，而不必担心数据安全的问题，但是私钥必须自己保留。例如A和B要进行加密通信。A发送数据“123”，使用B’公钥加密得到结果“abc”，传递给B，B使用私钥B”进行解密即可得到数据。反之亦然。</p>
+
+<p>既然非对称密钥这么好，我们直接使用非对称密钥不就好了么？从技术层面来说当然是这样，但是实际应用中涉及性能。非对称密钥算法加密性能不如对称密钥。所以有没有一种方法既可以安全的传输加密数据，又可以不耗损太多的性能呢？对称密钥和非对称密钥的结合。有关性能不部分可参见<a href="http://www.cse.wustl.edu/~jain/cse567-06/ftp/encryption_perf/">Performance Analysis of Data Encryption Algorithms</a></p>
+
+<p>同样A要发送数据“123”，使用对称密钥B”，来进行加密，那么B”如何得到呢？通过非对称密钥来传递B”。大致过程如下。</p>
+
+
+
+<div class="sequence-diagram"><svg height="400" version="1.1" width="431.328125" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="overflow: hidden; position: relative; left: -0.5px; top: -0.40625px;"><desc style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Created with Raphaël 2.1.2</desc><defs style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><marker id="raphael-marker-endblock55-obj24" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj27" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj33" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj36" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker></defs><rect x="10" y="20" width="64.46875" height="40" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="20.21875" y="30" width="44.46875" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="42.234375" y="40" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Site_A</tspan></text><rect x="10" y="340" width="64.46875" height="40" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="20.21875" y="350" width="44.46875" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="42.234375" y="360" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Site_A</tspan></text><path fill="none" stroke="#000000" d="M42.234375,60L42.234375,340" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="338.453125" y="20" width="62.875" height="40" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="348.4375" y="30" width="42.875" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="369.890625" y="40" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Site_B</tspan></text><rect x="338.453125" y="340" width="62.875" height="40" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="348.4375" y="350" width="42.875" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="369.890625" y="360" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Site_B</tspan></text><path fill="none" stroke="#000000" d="M369.890625,60L369.890625,340" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="167.859375" y="75" width="75.546875" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="206.0625" y="85" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">发送公钥A'</tspan></text><path fill="none" stroke="#000000" d="M42.234375,100C42.234375,100,323.7259292327799,100,364.89132009836464,100" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj24)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="168.421875" y="115" width="74.40625" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="206.0625" y="125" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">发送公钥B'</tspan></text><path fill="none" stroke="#000000" d="M369.890625,140C369.890625,140,88.39907076722011,140,47.233679901635355,140" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj27)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="62.234375" y="160" width="160" height="30" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="67.234375" y="165" width="150" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="142.234375" y="175" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">彼此获取到对方的公钥</tspan></text><rect x="51.796875" y="205" width="307.65625" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="206.0625" y="215" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">使用(非对称密钥）B'的公钥来加密对称密钥A''</tspan></text><path fill="none" stroke="#000000" d="M42.234375,230C42.234375,230,323.7259292327799,230,364.89132009836464,230" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj33)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="51.796875" y="245" width="307.65625" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="206.0625" y="255" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">使用(非对称密钥）A'的公钥来加密对称密钥B''</tspan></text><path fill="none" stroke="#000000" d="M369.890625,270C369.890625,270,88.39907076722011,270,47.233679901635355,270" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj36)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="62.234375" y="290" width="280" height="30" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="67.234375" y="295" width="270" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="202.234375" y="305" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">安全获取到彼此用于数据加密的对称密钥</tspan></text></svg></div>
+
+<p>完整性和源认证。完整性和源认证是在非对称密钥算法的前提上所添加的。为什么这么说呢？因为无法保证数据的私密性，那么完整性和源认证根本无从谈起。就像两个人说悄悄话，中间者已经完全可以监听到你们谈话的内容，自然可以完完整整的修改内容。</p>
+
+<p>完整性，所谓的完整性就是文件或数据在传输的过程中没有被修改，哪怕是漫无目的的修改。在文件中通常都会有一个md5。不管文件多大或文件多小，都能生成一个固定长度的md5值，并且这个值具备 “雪崩效应”、“不可逆”、“冲突避免”、“固定长度”。这么好的东西自然可以用来做完整性校验。因为哪怕是文件只修改了一个字符，md5计算出来的值也会有天壤之别。</p>
+
+<p>源认证，源认证就是要保证我从对方收到的数据，真的是一个合法的源发送给我的。源认证主要用于防止中间人攻击，就是假冒一个合法的源，向对端传送数据。</p>
+
+<p>在实际传输过程中，例如站点A要传数据到站点B，  明文数据通过散列函数算出一个散列值，然后将 数字签名和计算明文的散列值，通过公钥进行加密，传递到对方。对方收到数据之后会首先检查数字签名，解密成功之后确认是合法的源发给我的数据，然后才会对加密信息进行解密。</p>
+
+<p>这样通过文件的散列函数确认了文件的完整性，通过数字签名解决了源认证的问题，并且通过非对称密钥算法解决文件传输加密的问题。这样就保证了网络层的安全。</p>
+
+
+
+<h3 id="封装协议和传输模式">封装协议和传输模式</h3>
+
+<p>在ipsec vpn中封装方式分为两种，一种是ESP封装一种是AH封装。我们少废话先看报文。 <br>
+<img src="https://lh3.googleusercontent.com/-r1xOl5EBxBM/Wd8HnbHqokI/AAAAAAAAAis/wxg9mZPjggo_Pnh56wjaumCFvOmN6MtjwCLcBGAs/s0/AH+and+ESP.png" alt="enter image description here" title="AH and ESP.png"></p>
+
+<p>关于传输模式和隧道模式在下面有介绍，这里暂时不涉及。观察上图可以发现，AH只做了校验，并没有加密。反观ESP提供了加密、验证、校验完整功能。所以AH和ESP对比结果如下。</p>
+
+<p>AH：提供源认证和完整性校验，但是不提供加密服务。不能穿越NAT <br>
+ESP：提供加密，源认证，完整性校验。</p>
+
+<p>另外要说明的是AH 校验，并不是校验IP头中所有的字段，而是部分字段。这部分详细信息请参阅RFC2402。下图中黑色部分就说不校验的部分。之所以不校验这些字段是因为，这些字段在传输的过程中可能会发生改变，导致接受方校验错误而导致数据包的丢弃。</p>
+
+<p><img src="https://lh3.googleusercontent.com/-8vLYXXf9yeg/Wd8H2lQ04lI/AAAAAAAAAi0/BSZi7C1YQx0Fwkd8vtdAncr8-nKbCu7DQCLcBGAs/s0/AH+IP+head.png" alt="enter image description here" title="AH IP head.png"></p>
+
+
+
+<h3 id="传输模式和隧道模式">传输模式和隧道模式</h3>
+
+<p>在传输模式中分为传输模式和隧道模式。这里涉及2个点，一个是加密点和通信点。例如在一个二层以太网环境中，两台主机互相进行通信，那么他们之间的通信就是加密点等于通信点。但是如果要访问的是公网上分支站点的内部ip，此时的情况加密点和通信点并不是在一起，所以就需要使用到隧道模式。</p>
+
+<p><img src="https://lh3.googleusercontent.com/-k_9riwnWYZY/Wd8IK8qC3qI/AAAAAAAAAi8/ToDnXJMw68QwOZd_TP72lq8Plt8cCDE7wCLcBGAs/s0/%25E4%25BC%25A0%25E8%25BE%2593%25E6%25A8%25A1%25E5%25BC%258F%25E5%2592%258C%25E9%259A%25A7%25E9%2581%2593%25E6%25A8%25A1%25E5%25BC%258F.png" alt="enter image description here" title="传输模式和隧道模式.png"></p>
+
+
+
+<h3 id="密钥有效期">密钥有效期</h3>
+
+<p>长时间使用相同的密钥来加密数据显然是不安全的，所以cisco默认设置3600秒的时候就会重新生成一次密钥，新生成的密钥与之前的密钥不存在衍生关系。保证了长期使用相同的密钥也不用担心暴力破解加密流量的可能性。</p>
+
+
+
+<h2 id="esp封装方式和传输模式介绍">ESP封装方式和传输模式介绍</h2>
+
+<p>ESP报文结构如下，由于Wireshark解码的问题，这一部分可能观察不到。如下部分来自RFC4303和IPSec Overhead Calculator Tool。由于不同的加密方式会产生不同ESP大小，如下部分仅以此配置为准。具体查询，可参见IPSec Overhead Calculator Tool，如下部分不再赘述。</p>
+
+
+
+<h3 id="配置">配置：</h3>
+
+<pre><code>crypto isakmp policy 10
+ encr aes
+ hash sha512
+ authentication pre-share
+ group 16
+ lifetime 60
+crypto isakmp key cisco address 12.1.1.2       
+!
+crypto ipsec transform-set 123 esp-aes esp-sha-hmac 
+ “mode transport or mode tunnel”
+!
+crypto map vpn 10 ipsec-isakmp 
+ set peer 12.1.1.2
+ set transform-set 123 
+ match address vpn
+!
+ip access-list extended vpn
+ permit ip host 1.1.1.1 host 2.2.2.2
+!
+end
+</code></pre>
+
+<p><img src="https://lh3.googleusercontent.com/lOc6t_1SdgIw1m_zGxD5uDnB8xN4wZHMLWtHpfa1KE9lHk2qSjGSOaawaxQKOQZmxYfxfAe7WsAM=s0" alt="enter image description here" title="ipsecespformat.png"></p>
+
+<p><img src="https://lh3.googleusercontent.com/-g7Y-zYwcbJY/Wd8I1vvrEtI/AAAAAAAAAjU/szKGF4OvsnUIjgot04Hm017qgqmvCCKkgCLcBGAs/s0/ipsec+vpn+base.jpg" alt="enter image description here" title="ipsec vpn base.jpg"></p>
+
+<table>
+<thead>
+<tr>
+  <th align="left">Field</th>
+  <th align="left">Description</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td align="left">ESP Header SPI（4）</td>
+  <td align="left">安全参数索引（Security Parameter Index）与目标地址和安全协议类型组合的32位值，用于标识要用于此数据报的安全关联。</td>
+</tr>
+<tr>
+  <td align="left">ESP Header Sequence Number（4）</td>
+  <td align="left">当在两个设备之间形成安全关联时，计数器字段初始化为零，每当使用此SA进行数据传输，此值将加一。 这用于防止重放攻击</td>
+</tr>
+<tr>
+  <td align="left">Payload Data（Variable）</td>
+  <td align="left">加密的有效载荷数据，由高层消息或封装的IP数据报组成。 还可以包括支持信息，例如某些加密方法所需的初始化向量。</td>
+</tr>
+<tr>
+  <td align="left">ESP Trailer Padding（Variable 0 to 255)</td>
+  <td align="left">根据需要包括用于加密或对齐的附加填充字节。</td>
+</tr>
+<tr>
+  <td align="left">Pad Length（1）</td>
+  <td align="left">填充字段的字节数。</td>
+</tr>
+<tr>
+  <td align="left">ESP Trailer Next Header（1）</td>
+  <td align="left">包含数据报中下一个报头的协议号。</td>
+</tr>
+<tr>
+  <td align="left">ESP Authentication Data （Variable）</td>
+  <td align="left">此字段包含应用可选ESP认证算法后产生的完整性检查值（ICV）</td>
+</tr>
+</tbody></table>
+
+
+<table>
+<thead>
+<tr>
+  <th>PACKET DETAILS(Transport Mode)</th>
+  <th align="left">value</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>Field</td>
+  <td align="left">Bytes</td>
+</tr>
+<tr>
+  <td>Original IPv4 Header</td>
+  <td align="left">20</td>
+</tr>
+<tr>
+  <td>SPI (ESP Header)</td>
+  <td align="left">4</td>
+</tr>
+<tr>
+  <td>Sequence (ESP Header)</td>
+  <td align="left">4</td>
+</tr>
+<tr>
+  <td>ESP-AES (IV)</td>
+  <td align="left">16</td>
+</tr>
+<tr>
+  <td>Original Data Payload</td>
+  <td align="left">80</td>
+</tr>
+<tr>
+  <td>ESP Pad (ESP-AES)</td>
+  <td align="left">14</td>
+</tr>
+<tr>
+  <td>Pad length (ESP Trailer)</td>
+  <td align="left">1</td>
+</tr>
+<tr>
+  <td>Next Header (ESP Trailer)</td>
+  <td align="left">1</td>
+</tr>
+<tr>
+  <td>ESP-SHA-HMAC ICV (ESP Trailer)</td>
+  <td align="left">12</td>
+</tr>
+<tr>
+  <td>Total IPSec Packet Size</td>
+  <td align="left">152</td>
+</tr>
+</tbody></table>
+
+
+<table>
+<thead>
+<tr>
+  <th>PACKET DETAILS(Tunnel Mode)</th>
+  <th align="left">value</th>
+  <th></th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>Field</td>
+  <td align="left">Bytes</td>
+  <td></td>
+</tr>
+<tr>
+  <td>New IPv4 Header (Tunnel Mode)</td>
+  <td align="left">20</td>
+  <td></td>
+</tr>
+<tr>
+  <td>SPI (ESP Header)</td>
+  <td align="left">4</td>
+  <td></td>
+</tr>
+<tr>
+  <td>Sequence (ESP Header)</td>
+  <td align="left">4</td>
+  <td></td>
+</tr>
+<tr>
+  <td>ESP-AES (IV)</td>
+  <td align="left">16</td>
+  <td></td>
+</tr>
+<tr>
+  <td>Original Data Packet</td>
+  <td align="left">100</td>
+  <td></td>
+</tr>
+<tr>
+  <td>ESP Pad (ESP-AES)</td>
+  <td align="left">10</td>
+  <td></td>
+</tr>
+<tr>
+  <td>Pad length (ESP Trailer)</td>
+  <td align="left">1</td>
+  <td></td>
+</tr>
+<tr>
+  <td>Next Header (ESP Trailer)</td>
+  <td align="left">1</td>
+  <td></td>
+</tr>
+<tr>
+  <td>ESP-SHA-HMAC ICV (ESP Trailer)</td>
+  <td align="left">12</td>
+  <td></td>
+</tr>
+<tr>
+  <td>Total IPSec Packet Size</td>
+  <td align="left">168</td>
+  <td></td>
+</tr>
+</tbody></table>
+
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li>Cisco IPSec VPN 实战指南 秦柯 著</li>
+<li><a href="http://www.cse.wustl.edu/~jain/cse567-06/ftp/encryption_perf/">Performance Analysis of Data Encryption Algorithms</a></li>
+<li><a href="http://www.allsyllabus.com/aj/note/Computer_Science/Computer%20Networks%20-%20II/Unit5/Encapsulating%20Security%20Payload%20%28ESP%29.php#.Wd8N7z4jHRm">Encapsulating Security Payload (ESP)</a></li>
+<li><a href="https://www.ietf.org/rfc/rfc2402.txt">RFC 2402 3.3.3.1.1.1  Base Header Fields</a></li>
+<li><a href="http://www.tcpipguide.com/free/t_IPSecEncapsulatingSecurityPayloadESP-4.htm">IPSec Encapsulating Security Payload (ESP)</a></li>
+<li><a href="%28https://www.ietf.org/rfc/rfc4303.txt%29">RFC4303</a></li>
+<li><a href="https://cway.cisco.com/tools/ipsec-overhead-calc/">IPSec Overhead Calculator Tool</a></li>
+</ol>
+
+<p><em>2017年10月12日更新</em></p></div></body>
+</html>

@@ -1,0 +1,218 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+<title>Cisco Zone-Based Policy Firewall基础介绍 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="cisco-zone-based-policy-firewall基础介绍">Cisco Zone-Based Policy Firewall基础介绍</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#cisco-zone-based-policy-firewall基础介绍">Cisco Zone-Based Policy Firewall基础介绍</a><ul>
+<li><a href="#介绍">介绍</a></li>
+<li><a href="#zone-based-policy-firewall基础">Zone-Based Policy Firewall基础</a></li>
+<li><a href="#zone-based-policy-firewall实验">Zone-Based Policy Firewall实验</a><ul>
+<li><a href="#关键配置">关键配置</a></li>
+</ul>
+</li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<ol>
+<li>Zone-Based Policy Firewall基础</li>
+<li>Zone-Based Policy Firewall实验</li>
+</ol>
+
+
+
+<h2 id="zone-based-policy-firewall基础">Zone-Based Policy Firewall基础</h2>
+
+<p>Zone-Based Policy Firewall（ZFW）是一种安全策略。当两个接口属于相同的Zone的时候流量可以互通，但是如果两个接口属于不同的zone的时候，默认不可互通。如果想让zone和zone之间进行通信需要单独配置相应的策略，使其互通。 <br>
+Zone-Based Policy Firewall（ZFW）概念的引入相比ACL（访问控制列表），更易于管理并且ZFW提供了应用层匹配，并提供了限速的功能，更好的提供服务。 <br>
+Zone的概念: <br>
+相同zone 可以互相互通。 <br>
+不同zone 不能互通除非做相应的策略 <br>
+不属于任何zone的任何方法都不能和zone进行通信</p>
+
+
+
+<h2 id="zone-based-policy-firewall实验">Zone-Based Policy Firewall实验</h2>
+
+<p>拓扑 <br>
+<img src="https://lh3.googleusercontent.com/-JWXo6ZSFluA/Wd7cGPcZwoI/AAAAAAAAAhs/QxHdJ8mTrjE2hVY52yAQ84aWw-i53v2CACLcBGAs/s0/zone.jpg" alt="enter image description here" title="zone.jpg"> <br>
+需求： <br>
+R2Ping通R4 <br>
+ R3Ping通R5  <br>
+R4可以Ping通R2，R4不能ping通R3  <br>
+R5TelnetR2，不能TelnetR3上</p>
+
+<p>配置步骤： <br>
+ 1. 创建zone，并将接口划分到zone上    </p>
+
+<pre><code>R1(config)#zone security zone-name
+R1(config-if)#zone-member security zone-name
+</code></pre>
+
+<p> 2. 配置class-map </p>
+
+<pre><code>class-map type inspect {match-all | match-any} class-map-name
+</code></pre>
+
+<p>其中inspect代表”Firewall Class Map” <br>
+选择match-all或 match-any <br>
+match-all：所有都match上，这个class才match上 <br>
+match-any：match任意一个条件，class就可以match上</p>
+
+<p> 3.  配置match条件</p>
+
+<pre><code>R1(config-cmap)#match ?
+  access-group    Access group
+  class-map         Class map
+  protocol            PAM Protocol
+  security-group  Security Group
+  user-group        User Group
+</code></pre>
+
+<p> 4.  配置policy-map关联class-map,并指定动作</p>
+
+<pre><code>policy-map type inspect policy-map-name
+ class type inspect class-map-name
+    { drop | inspect | pass | police}
+
+R1(config-pmap-c)#?
+Policy-map class configuration commands:
+  drop            Drop the packet
+  exit            Exit from class action configuration mode
+  inspect         Context-based Access Control Engine
+  no              Negate or set default values of a command
+  pass            Pass the packet
+  police          Police
+  service-policy  Deep Packet Inspection Engine
+</code></pre>
+
+<p>drop：丢弃流量。 <br>
+inspect:数据包状态检查。 <br>
+pass：流量通过 <br>
+police：流量管制（限速）</p>
+
+<p>注：pass和inspect动作。 <br>
+pass只是放通单向流量，如果网络中有交互式数据流，例如tcp或icmp等，那么配置pass动作的时候需要考虑回向流量。 <br>
+而inspect，可以事先检测流量，是否放通，如果检测通过无需重新配置，回向流量不做策略也能放通。 <br>
+有关数据包状态检查，可参见：Cisco ASA 5500 Series Configuration Guide using the CLI, 8.2   Stateful Inspection Overview</p>
+
+<p> 5.  配置zone-pair关联policy-map</p>
+
+<pre><code> zone-pair security zone-pair-name source zone-name destination zone-name
+ service-policy type inspect policy-map-name
+</code></pre>
+
+
+
+<h3 id="关键配置">关键配置</h3>
+
+<pre><code>!
+interface Ethernet0/0
+ ip address 12.1.1.1 255.255.255.0
+ zone-member security 1
+ ip ospf 1 area 0
+!
+interface Ethernet0/1
+ ip address 13.1.1.1 255.255.255.0
+ zone-member security 1
+ ip ospf 1 area 0
+!
+interface Ethernet0/2
+ ip address 14.1.1.1 255.255.255.0
+ zone-member security 2
+ ip ospf 1 area 0
+!
+interface Ethernet0/3
+ ip address 15.1.1.1 255.255.255.0
+ zone-member security 2
+ ip ospf 1 area 0
+!
+interface Ethernet1/0
+ no ip address
+ shutdown
+!
+interface Ethernet1/1
+ ip address 16.1.1.1 255.255.255.0
+ ip ospf 1 area 0
+!!
+ip access-list extended R4-ping-R2-access-list
+ permit ip host 14.1.1.4 host 12.1.1.2
+ip access-list extended R5-telnet-R2-access-list
+ permit ip host 15.1.1.5 host 12.1.1.2
+!!
+class-map type inspect match-all zone1-to-zone2-telnet-class-map
+ match protocol telnet
+class-map type inspect match-all zone2-to-zone1-telnet-class-map
+ match access-group name R5-telnet-R2-access-list
+ match protocol telnet
+class-map type inspect match-all zone1-to-zone2-icmp-class-map
+ match protocol icmp
+class-map type inspect match-all zone2-to-zone1-icmp-class-map
+ match access-group name R4-ping-R2-access-list
+ match protocol icmp
+!
+policy-map type inspect zone2-to-zone1-policy-map
+ class type inspect zone2-to-zone1-icmp-class-map
+  inspect
+ class type inspect zone2-to-zone1-telnet-class-map
+  inspect
+ class class-default
+  drop
+policy-map type inspect zone1-to-zone2-policy-map
+ class type inspect zone1-to-zone2-icmp-class-map
+  inspect
+ class type inspect zone1-to-zone2-telnet-class-map
+  inspect
+ class class-default
+  drop
+!
+zone security 1
+zone security 2
+zone-pair security zone1-to-zone2-zone-pair source 1 destination 2
+ service-policy type inspect zone1-to-zone2-policy-map
+zone-pair security zone2-to-zone1-zone-pair source 2 destination 1
+ service-policy type inspect zone2-to-zone1-policy-map
+!
+</code></pre>
+
+<p>视频部分参见：<a href="https://www.youtube.com/watch?v=5vrDeMxQC8E">https://www.youtube.com/watch?v=5vrDeMxQC8E</a></p>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li><a href="https://www.cisco.com/c/en/us/support/docs/security/ios-firewall/98628-zone-design-guide.html#topic1">Zone-Based Policy Firewall Design and Application Guide</a> </li>
+<li><a href="Cisco%20ASA%205500%20Series%20Configuration%20Guide%20using%20the%20CLI,%208.2">Cisco ASA 5500 Series Configuration Guide using the CLI, 8.2</a></li>
+</ol>
+
+<p><em>2017年10月12日更新</em></p></div></body>
+</html>

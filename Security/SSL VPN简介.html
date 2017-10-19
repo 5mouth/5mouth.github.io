@@ -1,0 +1,261 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+<title>SSL VPN简介 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ssl-vpn简介">SSL VPN简介</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#ssl-vpn简介">SSL VPN简介</a><ul>
+<li><a href="#介绍">介绍</a></li>
+<li><a href="#sslvpn的特性">SSLVPN的特性</a></li>
+<li><a href="#ssl-vpn三种接入方式">SSL VPN三种接入方式</a><ul>
+<li><a href="#无客户端模式clientless">无客户端模式（Clientless）</a></li>
+<li><a href="#简单客户端模式thin-client-mode">简单客户端模式（Thin-Client Mode）</a></li>
+<li><a href="#隧道模式tunnel-mode">隧道模式（Tunnel mode）</a></li>
+</ul>
+</li>
+<li><a href="#ssl-protocol">SSL Protocol</a><ul>
+<li><a href="#ssl记录协议ssl-record-protocol">SSL记录协议（SSL Record Protocol）</a></li>
+<li><a href="#密码变更协议change-cipherspec-protocol">密码变更协议（Change CipherSpec Protocol ）</a></li>
+<li><a href="#告警协议ssl-alert-protocol">告警协议（SSL Alert Protocol）</a></li>
+<li><a href="#握手协议handshake-protocol">握手协议（Handshake Protocol ）</a></li>
+</ul>
+</li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<p>IPsec VPN和SSLVPN是互补的技术，可以同时使用也可以单独使用！通过浏览器天生拥有的SSL加密技术实现灵活，是低成本的互联网远程访问解决方案，SSL VPN通常情况下不需要预先安装任何客户端软件。</p>
+
+<p>SSL VPN也被称为WebVPN，主要用于远程访问连接。远程访问通过安全套接层（Secure Socket Layer、SSL)来提供SSL VPN网关。</p>
+
+<p>SSL VPN网关允许远程用户使用Web浏览器建立安全的虚拟专用网（VPN）隧道，SSL是一个运用程序加密技术，它提供了网页游览器，邮件，即时聊天和其它数据流安全的Internet通讯。 <br>
+SSL最开始是由Netscape开发，并且在1996年改版，后来成为了IETF标准TLS的基础。虽然SSL和TLS在有些方面不同而且不能互相兼容，但是协议的架构基本是相同的。 <br>
+两个协议主要的目标是提供数据的私密性和完整性，提供了运用程序安全的通讯，默认SSL工作端口TCP/443，SSL VPN功能允许从任意位置连接到公司，提供远程访问支持，从而安全的将企业网络访问权限扩展到任何授权的用户上。</p>
+
+
+
+<h2 id="sslvpn的特性">SSLVPN的特性</h2>
+
+<ol>
+<li>不需要预先安装客户端软件</li>
+<li>使用标准的网页游览器建立远程VPN连接</li>
+<li>使用游览器拥有的SSL加密技术提供数据私密性</li>
+<li>提供细致的访问控制</li>
+<li>客户端运用程序可以通过多种方式动态的下载，例如：连接时在线下载，通过java，activex或者exe文件分发。</li>
+<li>提供连接互联网的系统灵活的建立VPN连接，不管这个系统是否被公司管理</li>
+<li>在任何地点都能轻松的穿越防火墙和网络</li>
+<li>支持透明的无线漫游</li>
+<li>可以使用集成的IOS防火墙提供增强的安全性</li>
+</ol>
+
+
+
+<h2 id="ssl-vpn三种接入方式">SSL VPN三种接入方式</h2>
+
+<p>SSL VPN应用程序的可访问性相对于IPsec VPN有一定的限制 SSL VPN的优势来自任意的互联网访问，提供无障碍的连接功能，几乎无需安装其他的桌面软件。</p>
+
+<p>SSL VPN提供三种SSL VPN接入方式：无客户端（clientless），简单客户端（thin-client）和完整隧道客户端（full-tunnel client）支持。</p>
+
+<p><img src="https://lh3.googleusercontent.com/-JfavdXakyUI/WaZ64hOF1TI/AAAAAAAAAaA/UtyAWSGzuG8iFFY-RPR-xPLWWLczdOGVgCLcBGAs/s0/SSL.jpg" alt="enter image description here" title="SSL.jpg"></p>
+
+
+
+<h3 id="无客户端模式clientless">无客户端模式（Clientless）</h3>
+
+<p>无客户端模式提供web只有的安全访问和访问基于web的的内容。无客户端模式提供对私有Web资源的安全访问(无客户端模式仅限于基于Web的内容)，并提供对Web内容的访问。远程用户使用客户机上的Web浏览器访问内部或公司网络。 <br>
+无客户端模式下支持以下应用程序：</p>
+
+<p>· WEB浏览（HTTP、HTTPS）运行远程用户浏览网页。 <br>
+· 文件共享（通过CIFS实现）在WEB页面提供文件服务器链接表项，运行用户进行相关操作浏览、创建、删除、下载、重命名等.. <br>
+· 基于WEB的电子邮件，例如Microsoft Outlook Web Access</p>
+
+
+
+<h3 id="简单客户端模式thin-client-mode">简单客户端模式（Thin-Client Mode）</h3>
+
+<p>简单客户端模式（也称为端口转发），简单客户端模式提供远程访问基于TCP的服务，如POP3，SMTP，IMAP，Telnet和SSH应用程序。 简单客户端模式通过Java小程序进行代理转发，该小程序在会话建立时从SSL VPN设备动态下载。 此模式扩展了Web浏览器的加密功能的功能</p>
+
+
+
+<h3 id="隧道模式tunnel-mode">隧道模式（Tunnel mode）</h3>
+
+<p>厚客户端模式（第3层）（也称为隧道模式或全隧道客户端）：隧道模式可远程访问广泛的应用程序支持，并通过下载SSL VPN Client（SVC）软件或Cisco AnyConnect 来自VPN服务器设备的VPN客户端软件。 此模式提供轻量级的集中配置且易于支持的SSL VPN隧道客户端，可为几乎任何应用程序提供完整的网络层（第3层）访问。</p>
+
+
+
+<h2 id="ssl-protocol">SSL Protocol</h2>
+
+<p>SSL是一个层次化的协议，每个层都有不同的功能。SSL protocol可以分为Record Layer（记录层）、Handshake Protocol（握手协议）、Application Data Protocol（应用数据协议）。它们的关系如下图所示，具体细节后面介绍。</p>
+
+<pre><code>+--------------------------------------------------------------------------------------------+
+|                                     Application Layer                                      |
++------------------------------------------------------------------------------+-------------+
+                                                                               |             
+                                                                               |             
++----------------------+------------------------+------------------+-----------V-------------+————&gt;
+|SSL Handshake Protocol|SSL Cipher Spec Protocol|SSL Alert Protocol|Application Data Protocol|        |
++----------------------+------------------------+------------------+-------------------------+        |
+                                                                                                     SSL Protocol Stack
++--------------------------------------------------------------------------------------------+        |
+|                                     SSL Record Protocol                                    |        |
++--------------------------------------------------------------------------------------------+————&gt;   
+
++--------------------------------------------------------------------------------------------+
+|                                      Transport layer                                       |
++--------------------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------------------+
+|                                       Network layer                                        |
++--------------------------------------------------------------------------------------------+
+</code></pre>
+
+
+
+<h3 id="ssl记录协议ssl-record-protocol">SSL记录协议（SSL Record Protocol）</h3>
+
+<p>SSL Record Protocol 为SSL提供两种服务，保密性，加密应用层数据；消息完整性，通过使用消息验证码（MAC，message authentication code）  <br>
+SSL Record Protocol 是为上层使用的基础协议。其中之一就是握手协议。用于交换加密和认证的密钥。 <br>
+如下描述了SSL记录协议的完成操作。记录协议将应用层的消息镜像分段，压缩数据，应用消息验证码（MAC），加密，添加报文头部，并将数据发送到TCP段中。收到的数据执行反向过程，被解密，被验证，解压缩，重新组合然后传输到应用程序。</p>
+
+<pre><code>                            +----------------------------+
+Application Data            |||||||||||||||||||||||||||||| | 【原始应用数据】
+                            +----------------------------+ V
+                                                           |
+                            +--------++--------++--------+ V
+Fragment                    |||||||||||||||||||||||||||||| | 【拆分数据段】
+                            +--------++--------++--------+ V
+                                                           |
+                            +--------+                     V
+Compress                    |--------|                     | 【对数据段进行无损压缩】
+                            +--------+                     V
+                                                           |
+                            +--------+-+                   V
+Add MAC                     |--------|*|                   | 【添加消息验证码】
+                            +--------+-+                   V
+                                                           |
+                            +----------+                   V
+Encrypt                     |XXXXXXXXXX|                   | 【数据进行加密】
+                            +----------+                   V
+                                                           |
+                          +-+----------+                   V
+Append SSL Record Header  |+|XXXXXXXXXX|                   | 【添加SSL Record Header】
+                          +-+----------+                   V
+</code></pre>
+
+<ol>
+<li><p>第一步 分段（Fragmentation）将应用层的数据拆分成SSL 可接受的段大小。</p></li>
+<li><p>第二步 压缩（Compress）可选，默认的压缩算法为空，可以指定压缩的算法。</p></li>
+<li><p>第三步 添加消息验证码（Message Authentication Code），添加MAC的目的是进行完整性校验，防止数据在传输的过程中被篡改。</p></li>
+<li><p>第四步 加密（Encrypted ）使用加密算法来对消息进行加密。</p></li>
+<li><p>第五步 添加头部（SSL Record Header），头部信息由如下部分组成。 <br>
+Content Type (8 bits)：提交更高层的协议来处理enclosed fragment. <br>
+Major Version (8 bits):标识SSL使用的主要版本 <br>
+Minor Version (8 bits):标识SSL使用的次要版本，对于SSLv3，值为0。 <br>
+Compressed Length (16 bits):纯文本片段的长度</p></li>
+</ol>
+
+
+
+<h3 id="密码变更协议change-cipherspec-protocol">密码变更协议（Change CipherSpec Protocol ）</h3>
+
+<p>Change CipherSpec Protocol由单个消息组成，单个字节，值为1。这个消息的目的是将待处理状态（pending state）复制到当前状态（current state），这个消息，服务器要发送到客户端，客户端也要发送到服务器，当双方都收到之后，后续所有的交互报文将被加密。</p>
+
+
+
+<h3 id="告警协议ssl-alert-protocol">告警协议（SSL Alert Protocol）</h3>
+
+<p>告警协议用于向对等实体传递与SSL相关的警报。协议中的每个消息由两个字节组成。 第一个字节取值“warning”（1）或“fatal”（2）来传达消息的严重性。 如果级别是致命的，SSL立即终止连接。第二个字节包含一个指示特定警报的代码。</p>
+
+
+
+<h3 id="握手协议handshake-protocol">握手协议（Handshake Protocol ）</h3>
+
+<p>SSL是复杂的握手协议。这个协议允许服务器端和客户端之间彼此认证，并协商加密算法，MAC算法，以及用于SSL业务数据的加密密钥。在发送业务数据之前，必须先使用握手协议进行SSL协商，协商成功之后加密业务数据，进行传输。 <br>
+下图描述了SSL 建立交换的过程，总共有4个阶段。</p>
+
+
+
+<div class="sequence-diagram"><svg height="250" version="1.1" width="110" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="overflow: hidden; position: relative;"><desc style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Created with Raphaël 2.1.2</desc><defs style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><marker id="raphael-marker-endblock55-obj28" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj31" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj34" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj37" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj40" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj43" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker></defs><rect x="10" y="20" width="20" height="20" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="20" y="30" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="30" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Clinet</tspan></text><rect x="10" y="210" width="20" height="20" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="20" y="220" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="220" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Clinet</tspan></text><path fill="none" stroke="#000000" d="M20,40L20,210" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="60" y="20" width="20" height="20" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="70" y="30" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="30" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Server</tspan></text><rect x="60" y="210" width="20" height="20" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="70" y="220" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="220" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Server</tspan></text><path fill="none" stroke="#000000" d="M70,40L70,210" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="40" y="60" width="10" height="10" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="65" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="65" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">--------------------------------------Handshake Protocol Action------------------------------------</tspan></text><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="95" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="95" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">ClientHello</tspan></text><path fill="none" stroke="#000000" d="M20,90C20,90,52.33681917190552,90,64.99996808590367,90" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj28)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="115" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="115" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">ServerHello(Certificate*,ServerKeyExchange*,CertificateRequest*)ServerHelloDone</tspan></text><path fill="none" stroke="#000000" d="M70,110C70,110,37.66318082809448,110,25.000031914096326,110" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj31)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="135" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="135" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Certificate*,ClientKeyExchange, CertificateVerify*,[ChangeCipherSpec],Finished</tspan></text><path fill="none" stroke="#000000" d="M20,130C20,130,52.33681917190552,130,64.99996808590367,130" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj34)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="155" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="155" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">[ChangeCipherSpec],Finished</tspan></text><path fill="none" stroke="#000000" d="M70,150C70,150,37.66318082809448,150,25.000031914096326,150" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj37)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="175" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="175" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Application Data</tspan></text><path fill="none" stroke="#000000" d="M20,170C20,170,52.33681917190552,170,64.99996808590367,170" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj40)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="195" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="195" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Application Data</tspan></text><path fill="none" stroke="#000000" d="M70,190C70,190,37.66318082809448,190,25.000031914096326,190" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj43)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path></svg></div>
+
+<p><strong>阶段1</strong> ， 用于启动建立连接。客户端发送Client Hello消息。Client Hello消息包含如下内容: <br>
+· Version: 客户端最高支持的SSL版本。 <br>
+· Random: 客户端生成，32位时间戳和28位字节组成，由安全随机数生成器生成。这些值，这个随机值用于在密钥交换期间防止防重放攻击。 <br>
+· Session ID:可变长度会话标识符。值为0标识客户端希望在新的会话上建立连接。非0值标识希望使用现有的连接参数上创建新的连接。 <br>
+· CipherSuite:客户端支持加密算法的列表，按照优先级进行降序排列。 <br>
+· Compression Method:客户端支持的压缩算法的列表。</p>
+
+<p>发送Client Hello消息之后，客户端等待收到Server Hello消息，对于Server Hello消息遵循如下规范。</p>
+
+<ol>
+<li>版本字段包含服务器所支持的最高版本</li>
+<li>随机字段有服务器生成，与客户端的随机字段没有关联性。</li>
+<li>如果客户端的SessionID字段为非零服务器使用相同的SessionID值。反之SessionID字段使用新的会话值。</li>
+<li>CipherSuite字段包含客户端提出的加密算法，服务器在加密算法中选其一。</li>
+<li>Compression 字段包含客户端提出的压缩算法，服务器在压缩算法中选其一。</li>
+</ol>
+
+<p>CipherSuite用于指定密钥交换算法。密钥算法列表支持如下： <br>
+ · RSA：密钥有接收方的RSA公钥加密。 <br>
+ · Fixed Diffie-Hellman: 这个是DH密钥交换（Diffie-Hellman key exchange），其中服务器证书包含证书颁发机构（CA）签名的DH公共参数（Diffie-Hellman public parameters）即，公共密钥证书包含DH公钥参数。客户端在证书中提供其Diffie-Hellman公钥参数,如果客户端需要认证或者在密钥交换消息中。基于固定DH（Fixed Diffie-Hellman）计算方法，来参数两个对等体之间的固定密钥。 <br>
+ · Ephemeral Diffie-Hellman:此技术用于创建临时（一次性）的密钥。在这种情况下DH公钥交换，并使用发送者特有的RSA或DSS 进行签名。接收方，可以使用相应的公钥来验证签名，用于认证公钥。这个选项是其他三个DH中最安全的，因为他会生成临时的认证密钥。 <br>
+ · Anonymous Diffie-Hellman:匿名DH，使用基本的DH算法，没有认证，不安全，容易被中间人攻击。</p>
+
+<p>密钥交换算法在CipherSpec中定义，标识加密算法的相关参数。</p>
+
+<p><strong>阶段2</strong>，服务器通过发送其证书开始Phase 2，如果需要认证， 该消息包含一个或多个X.509证书，除了anonymous Diffie-Hellman之外，任何商定密钥交换方法都需要证书信息，如果使用的是 Fixed Diffie-Hellman，证书消息（Certificate Message）将用于密钥交换消息（Key Exchange Message），在此消息中包括服务器的公共的DH参数（Public Diffie-Hellman Parameters），接下来，如果需要，可能会发送一个server_key_exchange消息。 <br>
+如下两种情况不包括在内 <br>
+1. 服务器发送了具有固定Diffie-Hellman参数的证书 <br>
+2. 使用RSA密钥交换。 <br>
+接下来，非匿名服务器（不使用匿名Diffie-Hellman的服务器）可以从客户端请求证书。ertificate_request消息包括两个参数：ertificate_type 和 certificate_ authorities. （证书类型和证书颁发机构）证书类型表示公钥算法的类型在certificate_request消息中的第二个参数可以信任的CA列表。 <br>
+第二阶段最后消息需要server_done message 消息它由服务器发送，用于结束hello和相关消息。</p>
+
+<p><strong>阶段3</strong>，发送此消息后，服务器等待客户机响应。在收到server_done message消息之后，客户端校验服务器提供的证书，并检查hello参数是否可以接受，如果都可以接受，并服务器请求了客户端证书，那么客户端将发送证书给服务器，开始第三阶段。如果没有适合的证书使用，客户端将发送no_certificate alert 告警信息。</p>
+
+<p>接下来客户端需要发送client_key_exchange消息，消息的内容取决于密钥交换的类型。最后，在这个阶段上，客户端发送一个certificate_verify消息 ，用于客户端准确验证（explicit verification）该消息仅除包含fixed Diffie-Hellman参数的所有证书之外才发送。</p>
+
+<p><strong>阶段4</strong>，完成安全连接的设置。 客户端发送一个change_cipher_spec消息，并将待处理的CipherSpec复制到当前的CipherSpec中。然后，客户端立即按照新的算法，密钥和秘密发送完成的消息。 完成的消息验证密钥交换和认证过程是否成功。响应这两个消息，服务器发送自己的change_cipher_spec消息，将待处理传送到当前CipherSpec，并发送其完成的消息。 此时握手完成，客户端和服务器可以开始交换应用层数据。</p>
+
+<p>SSL握手交互过程如下图所示，取自<a href="https://www.cisco.com/c/en/us/about/press/internet-protocol-journal/back-issues/table-contents-18/ssl.html">这里</a>，更多报文字段相关细节，请参见RFC 6101和<a href="https://upload.wikimedia.org/wikipedia/commons/4/42/Ssl_handshake_with_two_way_authentication_with_certificates.svg">SSL Handshake With Two Way Authentication with Certificates</a> <br>
+<img src="https://lh3.googleusercontent.com/-f0qXw4y1g6k/Wa9NRcPuzoI/AAAAAAAAAbI/UzPdE0cCKoEblzsmReCuc93KExDsWEm8QCLcBGAs/s0/SSL.jpg" alt="enter image description here" title="SSL.jpg"></p>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li>RFC 6101</li>
+<li><a href="https://upload.wikimedia.org/wikipedia/commons/4/42/Ssl_handshake_with_two_way_authentication_with_certificates.svg">SSL Handshake With Two Way Authentication with Certificates</a></li>
+<li><a href="http://www.cnblogs.com/hyddd/archive/2009/01/07/1371292.html">浅析数字证书</a></li>
+<li><a href="http://techgenix.com/secure_socket_layer/">Secure Socket Layer</a></li>
+<li><a href="https://www.cisco.com/c/en/us/about/press/internet-protocol-journal/back-issues/table-contents-18/ssl.html">SSL: Foundation for Web Security - The Internet Protocol Journal - Volume 1, No. 1</a></li>
+<li><a href="https://blog.cloudflare.com/keyless-ssl-the-nitty-gritty-technical-details/#ephemeraldiffiehellmanhandshake">Keyless SSL: The Nitty Gritty Technical Details</a></li>
+<li>Cisco ASA设备使用指南 第20章 基于客户端的远程访问</li>
+<li>Network Security Technologies and Solutions –Chapter 18 Secure Sockets Layer VPN (SSL VPN)</li>
+</ol></div></body>
+</html>

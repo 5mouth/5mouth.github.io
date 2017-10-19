@@ -1,0 +1,167 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+<title>IPSec VPN 基础实验 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ipsec-vpn-基础实验">IPSec VPN 基础实验</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#ipsec-vpn-基础实验">IPSec VPN 基础实验</a><ul>
+<li><a href="#介绍">介绍</a></li>
+<li><a href="#ipsec-vpn配置逻辑">IPSec VPN配置逻辑</a></li>
+<li><a href="#ipsec-vpn传输模式配置">IPSec VPN传输模式配置</a></li>
+<li><a href="#ipsec-vpn隧道模式配置">IPSec VPN隧道模式配置</a></li>
+<li><a href="#ipsec-vpn状态检查">IPSec VPN状态检查</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<ol>
+<li>IPSec VPN配置逻辑</li>
+<li>IPSec VPN传输模式配置</li>
+<li>IPSec VPN隧道模式配置</li>
+</ol>
+
+
+
+<h2 id="ipsec-vpn配置逻辑">IPSec VPN配置逻辑</h2>
+
+<p>IPSec VPN配置逻辑包括以下三个步骤： <br>
+  1. 先配置isakmp策略，并指定isakmp peer 和预共享密钥。 <br>
+  2. 配置IPSec VPN 加密算法，以及传输模式。 <br>
+  3. 配置crypto map 关联ipsec，匹配“感兴趣流”，并在接口下应用。</p>
+
+
+
+<h2 id="ipsec-vpn传输模式配置">IPSec VPN传输模式配置</h2>
+
+<p>配置isakmp策略,加密aes，哈希md5，认证方式预共享密钥，采用group16加密强度。</p>
+
+<pre><code>crypto isakmp policy 10
+ encryption aes
+ hash md5
+ authentication pre-share
+ group 16
+</code></pre>
+
+<p>配置isakmp peer 和 预共享钥，与192.168.45.5进行isakmp协商，并且预共享密钥为“ccie43413”。</p>
+
+<pre><code>crypto isakmp key ccie43413 address 192.168.45.5 
+</code></pre>
+
+<p>配置IPSec VPN 加密算法，以及传输模式</p>
+
+<pre><code>crypto ipsec transform-set ipsec-police esp-aes
+ mode transport 
+</code></pre>
+
+<p>配置crypto map关联ipsec，并 匹配“感兴趣流”，并在接口下应用。</p>
+
+<pre><code>access-list 100 permit ip host 1.1.1.1 host 6.6.6.6
+!
+crypto map vpn 10 ipsec-isakmp
+ set peer 192.168.45.5
+ set transform-set ipsec-police
+ match address 100
+!
+interface Ethernet0/1
+ set ip address 192.168.23.2 255.255.255.0
+ set crypto map vpn
+</code></pre>
+
+
+
+<h2 id="ipsec-vpn隧道模式配置">IPSec VPN隧道模式配置</h2>
+
+<p>隧道模式仅需修改步骤3中“transport” 改为“tunnel”即可，其他无任何差别。详细配置略。</p>
+
+<pre><code>crypto ipsec transform-set ipsec-police esp-aes
+ mode tunnel
+</code></pre>
+
+
+
+<h2 id="ipsec-vpn状态检查">IPSec VPN状态检查</h2>
+
+<p>检查isakmp和ipsec状态“active”状态即为正常。</p>
+
+<pre><code>IOU2#show crypto ipsec sa 
+
+interface: Ethernet0/1
+    Crypto map tag: vpn, local addr 192.168.23.2
+
+   protected vrf: (none)
+   local  ident (addr/mask/prot/port): (1.1.1.1/255.255.255.255/0/0)
+   remote ident (addr/mask/prot/port): (6.6.6.6/255.255.255.255/0/0)
+   current_peer 192.168.45.5 port 500
+     PERMIT, flags={origin_is_acl,}
+    #pkts encaps: 4, #pkts encrypt: 4, #pkts digest: 4
+    #pkts decaps: 4, #pkts decrypt: 4, #pkts verify: 4
+    #pkts compressed: 0, #pkts decompressed: 0
+    #pkts not compressed: 0, #pkts compr. failed: 0
+    #pkts not decompressed: 0, #pkts decompress failed: 0
+    #send errors 0, #recv errors 0
+
+     local crypto endpt.: 192.168.23.2, remote crypto endpt.: 192.168.45.5
+     plaintext mtu 1454, path mtu 1500, ip mtu 1500, ip mtu idb Ethernet0/1
+     current outbound spi: 0xD9C88899(3653798041)
+     PFS (Y/N): N, DH group: none
+
+     inbound esp sas:
+      spi: 0xA7FCB727(2818357031)
+        transform: esp-aes ,
+        in use settings ={Tunnel, }
+        conn id: 1, flow_id: SW:1, sibling_flags 80000040, crypto map: vpn
+        sa timing: remaining key lifetime (k/sec): (4357294/591)
+        IV size: 16 bytes
+        replay detection support: N
+        ecn bit support: Y status: off
+        Status: ACTIVE(ACTIVE)
+
+     inbound ah sas:
+
+     inbound pcp sas:
+
+     outbound esp sas:
+      spi: 0xD9C88899(3653798041)
+        transform: esp-aes ,
+        in use settings ={Tunnel, }
+        conn id: 2, flow_id: SW:2, sibling_flags 80000040, crypto map: vpn
+        sa timing: remaining key lifetime (k/sec): (4357294/591)
+        IV size: 16 bytes
+        replay detection support: N
+        ecn bit support: Y status: off
+        Status: ACTIVE(ACTIVE)
+
+     outbound ah sas:
+
+     outbound pcp sas:
+IOU2# 
+</code></pre>
+
+<p><em>2017年10月13日更新</em></p></div></body>
+</html>

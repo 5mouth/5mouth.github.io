@@ -1,0 +1,364 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+<title>GETVPN简介 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="get-vpn简介group-encrypted-transport-vpn">GET VPN简介（Group Encrypted Transport VPN）</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#get-vpn简介group-encrypted-transport-vpn">GET VPN简介（Group Encrypted Transport VPN）</a><ul>
+<li><a href="#介绍">介绍</a><ul>
+<li><a href="#影响qos">影响QOS</a></li>
+<li><a href="#组播数据流和实时流量传输">组播数据流和实时流量传输</a></li>
+<li><a href="#覆盖路由问题">覆盖路由问题</a></li>
+</ul>
+</li>
+<li><a href="#get-vpn三大组件">GET VPN三大组件</a><ul>
+<li><a href="#密钥服务器gcksgroup-controllerkey-servers">密钥服务器（GCKS，Group Controller/Key Servers）</a></li>
+<li><a href="#组解释域gdoigroup-domain-of-interpretation">组解释域（GDOI，Group Domain of Interpretation ）</a></li>
+<li><a href="#组成员group-member">组成员（Group Member）</a></li>
+</ul>
+</li>
+<li><a href="#get-vpn如何工作how-get-vpn-works">GET VPN如何工作（How GET VPN Works）</a></li>
+<li><a href="#group-member-acl">Group Member ACL</a></li>
+<li><a href="#实验">实验</a><ul>
+<li><a href="#拓扑">拓扑</a></li>
+<li><a href="#ip地址规划">IP地址规划</a></li>
+<li><a href="#配置">配置</a></li>
+</ul>
+</li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<p>GETVPN有三大特点 <br>
+ 1. 实现实时任意到任意的连接（Any-to-Any Connectivity） <br>
+ 2. 扩展性高 <br>
+ 3. 可以实现实时连接 <br>
+GET VPN相比于传统VPN（IPSec VPN）可以很好的解决如下问题。</p>
+
+
+
+<h3 id="影响qos">影响QOS</h3>
+
+<p>(在新IOS上已不是问题）在传统的IPSec VPN中，流量从终端设备发送出来携带DSCP值，数据包经过加密点，采用Tunnel mode进行封装，Tunnel mode方式会将整个原始数据进行加密，然后产生一个新的IP头，新产生的IP头不会继承原有数据包的DSCP值，因此数据包通过加密设备之后DSCP值为0，影响了正常的QOS工作。</p>
+
+<p>同理在GETVPN中采用IP头部预留技术，会将原始的IP头部复制一份到最外层，同时对原有的IP头部进行安全保护，因此GETVPN能更好的与QOS配合使用。</p>
+
+<pre><code>          +-------++----+     
+          |IP Head||Data|     
+          +-------++----+     
+           \             \    
+            \             \   
+             \             \  
++-------++---++-------++----+ 
+|IP Head||ESP||IP Head||Data| 
++-------++---++-------++----+ 
+    ^             |           
+    |             |           
+    |             |           
+    +-----Copy----+ 
+</code></pre>
+
+
+
+<h3 id="组播数据流和实时流量传输">组播数据流和实时流量传输</h3>
+
+<p>在传统的IPSec VPN中，中心站点需要将同一份数据包传送到两个分支站点（分支站点A、分支站点B），那么需要分别与分支站点建立安全关联（SA），中心站点发送数据到分支站点A的流量，不能被中心站点B所解密，反之亦然。所以当需要涉及一对多传输或多对多传输的情况时，IPSec VPN需要建立很多个安全关联（SA）增加了网络的复杂度维护的难度。 <br>
+并且在站点和站点通信时，必须预先进行IKE协商，产生安全关联（SA），才能传输数据，因此对于实时性的流量（语音、视频）会增加网络延迟，影响用户体验。</p>
+
+<p>GET VPN中引入新概念称之为信任组成员“Trust Group Members”。所有需要加密或解密的站点，需要先加入这个信任组中，并且在这个信任组中至少存在一个密钥服务器（Key Server），密钥服务器（Key Server）的主要任务就是认证组成员，组成员一旦认证成功这个组成员就拥有了一个与其他组成员相同的安全关联，这个安全关联可以用于进行加密和解密数据。由于具有相同的安全关联，那么在相同组内的的站点彼此之间就可以互相通信。 <br>
+由于GETVPN的安全关联并不是被流量触发而产生，而是由组成员注册到服务器后进行下发的，因此可以减少因为协商安全关联而造成的网络延迟。这一点相比IPSec VPN要更加友好。</p>
+
+
+
+<h3 id="覆盖路由问题">覆盖路由问题</h3>
+
+<p>在传统的IPSec VPN中，需要在站点和站点之间运行动态路由协议，来保证站点内部的路由互相学习，所以需要在Tunnel接口上运行IPSec VPN和动态路由协议，因此产生了覆盖路由的问题。 <br>
+覆盖路由是指，上层Tunnel接口的动态路由协议，依赖于底层的路由协议运行。</p>
+
+<p>GET VPN因为保留原始的IP头部信息，是一种典型的无隧道VPN技术，因此消除了隧道类型IPSec VPN带来的覆盖路由的问题。</p>
+
+
+
+<h2 id="get-vpn三大组件">GET VPN三大组件</h2>
+
+
+
+<h3 id="密钥服务器gcksgroup-controllerkey-servers">密钥服务器（GCKS，Group Controller/Key Servers）</h3>
+
+<p>GCKS是以组的形式进行维护密钥的设备。单一个组成员（Group Member）进行注册的时候，密钥服务器（Key Server）会向这个组成员（Group Member）发送密钥和策略。同时密钥服务器（Key Server）会在密钥超时之前进行密钥更新。 <br>
+GCKS发送两种形式的密钥，传输加密密钥（TEK、Traffic Encryption Key)、加密密钥的密钥（KEK、Key Encryption Key)。</p>
+
+
+
+<h3 id="组解释域gdoigroup-domain-of-interpretation">组解释域（GDOI，Group Domain of Interpretation ）</h3>
+
+<p>GDOI协议用于在组成员和组控制器/密钥服务器（GCKS）之间建立安全关联，为安全的组通信提供支持，它会为获得授权的组成员间建立SA (安全关联)，GDOI 消息用来为组创建、维持或删除SA，被定义在IETF RFC 3547 中。GDOI协议使用UDP/848端口号。</p>
+
+
+
+<h3 id="组成员group-member">组成员（Group Member）</h3>
+
+<p>组成员是一台路由器，他在密钥服务器上注册，并且从密钥服务器获取IPsec SA，使用这个SA与属于这个组的其它设备通讯，组成员在密钥服务器上注册并且提供了一个组ID，并且从服务器获取用于这个组的安全策略和密钥。</p>
+
+
+
+<h2 id="get-vpn如何工作how-get-vpn-works">GET VPN如何工作（How GET VPN Works）</h2>
+
+<ol>
+<li><p>每个组成员向密钥服务器发送一个注册请求。密钥服务器通过使用GDOI 协议对组成员进行认证和授权，并向其发送IPsec 策略和密钥，该密钥将用于加密/解密IP组播和单播包。</p></li>
+<li><p>组成员向IPsec SA 注册成功后，会接收到相应的密钥，于是它可以绕过密钥服务器，直接和其他组成员交换加密的IP 组播和单播数据包，从而实现了安全通信。TEK 用来确保所有组成员间通信的安全。</p></li>
+<li><p>若有必要，密钥服务器会向组内的所有组成员发送密钥更新消息。该消息包括新的IPsec 策略和密钥,在当前IPsecSA 过期后，组成员就会使用新的IPsec 策略和密钥。密钥更新消息要在SA 过期之前发送出去以确保组成员始终存在有效的组密钥。</p></li>
+</ol>
+
+<blockquote>
+  <p><strong>摘自PDF注释信息:</strong> <br>
+  1. 每一个组成员发送注册请求到密钥服务器。通过GDOI协议，密钥服务器认证和授权组成员,并且发送策略和用于加解密IP单播和组播的密钥 <br>
+  2. 当组成员注册成功获取IPsec SA后，就会获取相应的密钥，组成员之间能够直接加密IP组播和单播，旁路掉密钥服务器建立安全的通讯。TEK用于加密在组成员之间的流量。 <br>
+  3. 如果需要，密钥服务器发送密钥更新信息到组内的所有成员。这个密钥更新信息包含新的IPsec策略和当IPsec SA超时以后使用的密钥，密钥更新信息会在SA超时之前发送，保障组密钥一直可用。</p>
+</blockquote>
+
+<p>GDOI协议在密钥服务器和组成员之间分发安全策略（IPsec SA）和密钥。密钥服务器有责任创建和维护IPsec SA和密钥，并且下载IPsec SA和密钥给所有认证的组成员。这样收到IPsec SA后认证的组成员就能够和组内的其它成员加密通讯了。</p>
+
+<p>GDOI协议被ISAKMP第一阶段交换后进行保护，所以GDOI密钥服务器需要和GDOI组成员拥有相同的ISAKMP策略。GDOI注册过程是一个单播交换使用UDP848，如果使用NAT-T就是4500。</p>
+
+<p>在GDOI注册过程中，每一个组成员将收到一个组播组地址，每一个注册到这个组播组的成员都请求希望收到一个组播密钥，当注册成功以后，密钥服务器发送一个组播密钥更新给所有在这个组注册成功的成员。</p>
+
+<p><strong>GDOI Message Exchange  (Unicast Exchange)</strong></p>
+
+
+
+<div class="sequence-diagram"><svg height="240" version="1.1" width="110" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="overflow: hidden; position: relative;"><desc style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Created with Raphaël 2.1.2</desc><defs style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><marker id="raphael-marker-endblock55-obj27" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj30" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj33" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj36" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker></defs><rect x="10" y="20" width="20" height="20" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="20" y="30" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="30" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Key Server</tspan></text><rect x="10" y="200" width="20" height="20" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="20" y="210" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="210" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Key Server</tspan></text><path fill="none" stroke="#000000" d="M20,40L20,200" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="60" y="20" width="20" height="20" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="70" y="30" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="30" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Group Member</tspan></text><rect x="60" y="200" width="20" height="20" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="70" y="210" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="210" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Group Member</tspan></text><path fill="none" stroke="#000000" d="M70,40L70,200" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="40" y="60" width="10" height="10" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="65" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="65" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">-----------ISAKMP Phase 1-----------</tspan></text><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="95" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="95" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">HDR, HASH. Initiator Nonce, Group ID</tspan></text><path fill="none" stroke="#000000" d="M70,90C70,90,37.66318082809448,90,25.000031914096326,90" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj27)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="115" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="115" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">HDR, HASH, Responder Nonce, SA</tspan></text><path fill="none" stroke="#000000" d="M20,110C20,110,52.33681917190552,110,64.99996808590367,110" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj30)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="135" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="135" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">HDR, HASH</tspan></text><path fill="none" stroke="#000000" d="M70,130C70,130,37.66318082809448,130,25.000031914096326,130" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj33)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="155" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="155" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">HDR, HASH, Keys</tspan></text><path fill="none" stroke="#000000" d="M20,150C20,150,52.33681917190552,150,64.99996808590367,150" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj36)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="40" y="170" width="10" height="10" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="0" y="0" width="0" height="0" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45" y="175" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan dy="175" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">-----------ISAKMP Phase 1-----------</tspan></text></svg></div>
+
+<p>HDR : HDR is an ISAKMP header payload <br>
+HASH: 每一个HASH都是一个伪随机数 <br>
+Initiator Nonce、Responder Nonce: Ni <br>
+SA:Security Association <br>
+Keys: Key Download、KD</p>
+
+
+
+<h2 id="group-member-acl">Group Member ACL</h2>
+
+<p>什么流量需要加密可以在密钥服务器上通过ACL静态的指定，这个策略既可以定义单播流量也可以定义组播流量，这个ACL定义了什么流量需要加密。这个信息会送到所有通过认证的组成员，创建可信任的域内通讯。这个策略从密钥服务器上下载并且附加在组成员本地配置ACL后面，任何组成员本地配置的ACL都优先于从密钥服务器上下载ACL。</p>
+
+<p>Cisco推荐使用私有的地址规划从一个简单主类网络到所有的需要被保护的组成员内部接口网络，例如：使用主类网10.0.0.0/8到所有的组成员内网接口网段，一个A类网络可以划分成很多/24的子网，这样就大大降低了密钥服务器定义策略的负责程度，使用一个连续的网络块，你只需要定义一个ACL条目，例如:access-list 101 permit ip 10.0.0.0 0.255.255.255 10.0.0.0 0.255.255.255。</p>
+
+
+
+<h2 id="实验">实验</h2>
+
+
+
+<h3 id="拓扑">拓扑</h3>
+
+<pre><code>            +-------------+             +-------------+           
+            |Key-Server-R4|             |Key-Server-R5|           
+            +---/---------+             +---------/---+           
+                |S1/1                         S1/1|                 
+                |                                 |               
+                |                                 |               
+                |     S1/4+-------------+S1/5     |               
+                +---------| Internet-R8 |---------+               
+                          +------+------+                         
+                                 |S1/0                               
+                                 |                                
+                                 |S1/0                             
+ +---------------+    S1/1+------+------+S1/3      +---------------+
+ |Group Member-R1+--------| Internet-R7 |----------+Group Member-R3|
+ +---------------+S1/0    +------+------+      S1/0+---------------+
+                                 |S1/2                               
+                                 |                                
+                                 |S1/0                            
+                         +-------+-------+                         
+                         |Group Member-R2|                         
+                         +---------------+                                                 
+</code></pre>
+
+
+
+<h3 id="ip地址规划">IP地址规划</h3>
+
+<pre><code>R1#show ip int br
+Interface              IP-Address      OK? Method Status                Protocol 
+Serial1/0              192.168.17.1    YES manual up                    up       
+Loopback1              1.1.1.1         YES manual up                    up     
+
+R2#show ip int br
+Interface              IP-Address      OK? Method Status                Protocol 
+Serial1/0              192.168.27.2    YES manual up                    up       
+Loopback1              2.2.2.2         YES manual up                    up      
+
+R3#show ip int br
+Interface              IP-Address      OK? Method Status                Protocol 
+Serial1/0              192.168.37.3    YES manual up                    up       
+Loopback1              3.3.3.3         YES manual up                    up   
+
+R4#show ip int br
+Interface              IP-Address      OK? Method Status                Protocol 
+Serial1/1              192.168.48.4    YES manual up                    up       
+Loopback1              4.4.4.4         YES manual up                    up   
+
+R5#show ip int br
+Interface              IP-Address      OK? Method Status                Protocol 
+Serial1/1              192.168.58.5    YES manual up                    up       
+Loopback1              5.5.5.5         YES manual up                    up   
+
+R7#show ip int br
+Interface              IP-Address      OK? Method Status                Protocol 
+Serial1/0              192.168.78.7    YES manual up                    up      
+Serial1/1              192.168.17.7    YES manual up                    up      
+Serial1/2              192.168.27.7    YES manual up                    up      
+Serial1/3              192.168.37.7    YES manual up                    up 
+Loopback1              7.7.7.7         YES manual up                    up   
+
+R8#show ip int br
+Interface              IP-Address      OK? Method Status                Protocol 
+Serial1/0              192.168.78.8    YES manual up                    up       
+Serial1/4              192.168.48.8    YES manual up                    up      
+Serial1/5              192.168.58.8    YES manual up                    up       
+Loopback1              8.8.8.8         YES manual up                    up 
+</code></pre>
+
+
+
+<h3 id="配置">配置</h3>
+
+<pre><code>!Key-Server-R4(Master）
+crypto key generate rsa general label ccie43413-rsa
+!
+access-list 199 permit ip 192.168.0.0 0.0.255.255 192.168.0.0 0.0.255.255
+!         
+crypto isakmp policy 10                                  !isakmp第一阶段配置
+ encr 3des
+ authentication pre-share
+ group 2
+crypto isakmp key ccie43413 address 192.168.17.1         !isakmp第一阶段配置,与R1建立isakmp
+crypto isakmp key ccie43413 address 192.168.27.2         !isakmp第一阶段配置,与R2建立isakmp
+crypto isakmp key ccie43413 address 192.168.37.3         !isakmp第一阶段配置,与R3建立isakmp
+crypto isakmp key ccie43413 address 192.168.58.5         !isakmp第一阶段配置,与R5建立isakmp
+!
+!
+crypto ipsec transform-set gdoi-trans esp-3des esp-sha-hmac !设置传输转换集
+ mode tunnel
+!
+!
+crypto ipsec profile getvpn-profile                      !配置profile
+ set security-association lifetime seconds 1800          !设置安全关联的寿命时间
+ set transform-set gdoi-trans                            !调用配置传输转换集
+!
+crypto gdoi group getvpn-group                           !配置gdoi部分
+ identity number 43413                                   !在同一个GETVPN域内的ID
+ server local
+  rekey retransmit 10 number 2                           !rekey重传，多少秒之后重新发送，重传次数
+  rekey authentication mypubkey rsa ccie43413-rsa        !调用之前产生的RSA
+  rekey transport unicast                                !指定采用单播的方式更新密钥
+  sa ipsec 1                                             !配置IPSec sa 的id，不同的id在插入的时候顺序不一样
+   profile getvpn-profile                                !调用配置“crypto ipsec profile”
+   match address ipv4 199                                !配置感兴趣的数据流
+   replay time window-size 5                             !配置防重放攻击 见“Group Encrypted Transport VPN (Get VPN) Design and Implementation Guide“3.5.7 TBAR
+  address ipv4 192.168.48.4                              !配置本地KS服务器server地址
+  redundancy
+   local priority 100                                    !配置KS优先级，值越大越优先
+   peer address ipv4 192.168.58.5                        !配置远端KS服务器server地址
+!
+------------------------------------------------------------------------------------------------------------------------------------
+!Key-Server-R5(Standby）
+crypto key generate rsa general label ccie43413-rsa
+!
+access-list 199 permit ip 192.168.0.0 0.0.255.255 192.168.0.0 0.0.255.255
+!         
+crypto isakmp policy 10
+ encr 3des
+ authentication pre-share
+ group 2
+crypto isakmp key ccie43413 address 192.168.17.1   
+crypto isakmp key ccie43413 address 192.168.27.2   
+crypto isakmp key ccie43413 address 192.168.37.3   
+crypto isakmp key ccie43413 address 192.168.48.4    !difference   
+!
+!
+crypto ipsec transform-set gdoi-trans esp-3des esp-sha-hmac 
+ mode tunnel
+!
+!
+crypto ipsec profile getvpn-profile
+ set security-association lifetime seconds 1800
+ set transform-set gdoi-trans 
+!
+crypto gdoi group getvpn-group
+ identity number 43413
+ server local
+  rekey retransmit 10 number 2
+  rekey authentication mypubkey rsa ccie43413-rsa
+  rekey transport unicast
+  sa ipsec 1
+   profile getvpn-profile
+   match address ipv4 199
+   replay time window-size 5
+  address ipv4 192.168.58.5                         !difference
+  redundancy
+   local priority 80                                !difference
+   peer address ipv4 192.168.48.4                   !difference
+!
+------------------------------------------------------------------------------------------------------------------------------------
+!Group Member-R1、Group Member-R2、Group Member-R3
+crypto isakmp policy 10
+encr 3des
+authentication pre-share
+group 2
+!
+crypto isakmp key ccie43413 address 192.168.48.4
+crypto isakmp key ccie43413 address 192.168.58.5
+!
+crypto gdoi group getvpn
+identity number 43413
+server address ipv4 192.168.48.4
+server address ipv4 192.168.58.5
+!
+crypto map getvpn-map 10 gdoi
+set group getvpn
+
+interface s1/0
+crypto map getvpn-map
+!
+</code></pre>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li><p><a href="https://lira.epac.to/DOCS-TECH/Security/Internet%20Security%20Technology%20and%20Hacking/final/ch17lev1sec1.html">Chapter 17. Group Encrypted Transport VPN (GET VPN)</a></p></li>
+<li><p><a href="https://www.cisco.com/c/dam/en/us/products/collateral/security/group-encrypted-transport-vpn/GETVPN_DIG_version_1_0_External.pdf">Group Encrypted Transport VPN (Get VPN) Design and Implementation Guide</a></p></li>
+<li><p>Network Security Technologies and Solutions， Chapter 17: Group Encrypted Transport VPN (GET VPN)</p></li>
+<li><p>网络安全技术解决方案（修订版）， 第17章 群组加密传输VPN（GETVPN）</p></li>
+<li><p>RFC 6407，RFC 3547</p></li>
+</ol></div></body>
+</html>

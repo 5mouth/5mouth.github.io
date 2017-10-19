@@ -1,0 +1,228 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+
+<title>IKEv2配置说明 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ikev2配置说明">IKEv2配置说明</h1>
+
+
+
+<h2 id="ikev2命令说明">IKEv2命令说明</h2>
+
+
+
+<h3 id="ikev2-proposal">IKEv2 Proposal</h3>
+
+<p>IKEv2 proposal是IKE SA中协商转换集（Transforms Collection）在IKE_SA_INIT交换中的一部分。在协商过程中转换类型如下：</p>
+
+<ul>
+<li>Encryption algorithm</li>
+<li>Integrity algorithm</li>
+<li>Pseudo-Random Function (PRF) algorithm</li>
+<li>Diffie-Hellman (DH) group </li>
+</ul>
+
+
+
+<pre class="prettyprint"><code class=" hljs vbnet">R1(config)<span class="hljs-preprocessor">#crypto ikev2 proposal ikev2-proposal </span>
+R1(config-ikev2-proposal)<span class="hljs-preprocessor">#?</span>
+IKEv2 Proposal commands:
+  encryption  <span class="hljs-keyword">Set</span> encryption algorithm(s) <span class="hljs-keyword">for</span> proposal
+  <span class="hljs-keyword">exit</span>        <span class="hljs-keyword">Exit</span> <span class="hljs-keyword">from</span> IKEv2 proposal configuration mode
+  <span class="hljs-keyword">group</span>       <span class="hljs-keyword">Set</span> the Diffie-Hellman <span class="hljs-keyword">group</span>(s)
+  integrity   <span class="hljs-keyword">Set</span> integrity hash algorithm(s) <span class="hljs-keyword">for</span> proposal
+  no          Negate a command <span class="hljs-keyword">or</span> <span class="hljs-keyword">set</span> its defaults</code></pre>
+
+
+
+<h3 id="ikev2-policy">IKEv2 policy</h3>
+
+<p>IKEv2 policy包含用于在SA_INIT交换中协商 加密，完整性，PRF算法和DH组。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs applescript">R1(config)<span class="hljs-comment">#crypto ikev2 policy ikev2-policy </span>
+R1(config-ikev2-policy)<span class="hljs-comment">#?</span>
+IKEv2 Policy commands:
+  <span class="hljs-keyword">exit</span>      Exit <span class="hljs-keyword">from</span> IKEv2 policy configuration mode
+  match     Match values <span class="hljs-keyword">of</span> <span class="hljs-keyword">local</span> fields
+  no        Negate a command <span class="hljs-keyword">or</span> <span class="hljs-keyword">set</span> <span class="hljs-keyword">its</span> defaults
+  proposal  Specify Proposal</code></pre>
+
+
+
+<h3 id="ikev2-keyring">IKEv2 Keyring</h3>
+
+<p>IKEv2 Keyring是对称和非对称预共享密钥的存储库。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs livecodeserver">R1(config)<span class="hljs-comment">#crypto ikev2 keyring ikev2-keyring</span>
+R1(config-ikev2-keyring)<span class="hljs-comment">#?</span>
+IKEv2 Keyring commands:
+  exit  Exit <span class="hljs-built_in">from</span> crypto ikev2 keyring sub mode
+  no    Negate <span class="hljs-operator">a</span> <span class="hljs-command"><span class="hljs-keyword">command</span> <span class="hljs-title">or</span> <span class="hljs-title">set</span> <span class="hljs-title">its</span> <span class="hljs-title">defaults</span></span>
+  peer  Configure <span class="hljs-operator">a</span> Peer <span class="hljs-operator">and</span> associated <span class="hljs-built_in">keys</span>
+</code></pre>
+
+
+
+<h3 id="ikev2-profile">IKEv2 Profile</h3>
+
+<p>IKEv2 profile是IKE SA的不可协商（NonNegotiable）参数的存储库，如本地或远程身份和身份验证方法和可用相匹配的配置文件，经过身份验证的对等体提供的服务。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs sql">R1(config)#crypto ikev2 profile ikev2-profile
+R1(config-ikev2-profile)#?
+IKEv2 profile commands:
+  aaa               Specify AAA related configs
+  authentication    <span class="hljs-operator"><span class="hljs-keyword">Set</span> authentication method
+  config-exchange   config-exchange options
+  description       Specify a description <span class="hljs-keyword">of</span> this profile
+  dpd               Enable IKE liveness <span class="hljs-keyword">check</span> <span class="hljs-keyword">for</span> peers
+  exit              Exit <span class="hljs-keyword">from</span> crypto ikev2 profile sub mode
+  <span class="hljs-keyword">identity</span>          Specify IKE <span class="hljs-keyword">identity</span> <span class="hljs-keyword">to</span> use
+  initial-contact   initial-contact processing
+  ivrf              I-VRF <span class="hljs-keyword">of</span> the profile
+  keyring           Specify keyring <span class="hljs-keyword">to</span> use
+  lifetime          <span class="hljs-keyword">Set</span> lifetime <span class="hljs-keyword">for</span> ISAKMP security association
+  <span class="hljs-keyword">match</span>             <span class="hljs-keyword">Match</span> <span class="hljs-keyword">values</span> <span class="hljs-keyword">of</span> peer
+  nat               NAT-transparency
+  <span class="hljs-keyword">no</span>                Negate a command <span class="hljs-keyword">or</span> <span class="hljs-keyword">set</span> its defaults
+  pki               Specify certificate authorities <span class="hljs-keyword">to</span> trust
+  redirect          IKEv2 Redirect Mechanism <span class="hljs-keyword">for</span> <span class="hljs-keyword">load</span>-balancing
+  virtual-template  Specify the virtual-template <span class="hljs-keyword">for</span> dynamic interface</span></code></pre>
+
+
+
+<h3 id="ipsec-transform-set">IPsec Transform-set</h3>
+
+<p>crypto ipsec transform-set是定义变换集（To define a transform set），定义适合的安全协议和加密算法。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs lasso">R1(config)<span class="hljs-variable">#crypto</span> ipsec transform<span class="hljs-attribute">-set</span> ikev2<span class="hljs-attribute">-transform</span><span class="hljs-attribute">-set</span> esp<span class="hljs-attribute">-aes</span> esp<span class="hljs-attribute">-sha</span><span class="hljs-attribute">-hmac</span>
+Crypto transform configuration commands:
+  default  <span class="hljs-built_in">Set</span> a command <span class="hljs-keyword">to</span> its defaults
+  exit     Exit from crypto transform configuration mode
+  mode     encapsulation mode (transport/tunnel)
+  no       Negate a command <span class="hljs-literal">or</span> <span class="hljs-built_in">set</span> its defaults</code></pre>
+
+
+
+<h3 id="crypto-map">crypto map</h3>
+
+<p>crypto 集合，集合内容如下。</p>
+
+<ul>
+<li>set peer　　　　　　关联IPsec对等体</li>
+<li>set transform-set　　关联转换集</li>
+<li>set ikev2-profile　　关联SA_INIT交换中协商参数</li>
+<li>match address　　定义感兴趣数据流</li>
+</ul>
+
+
+
+<pre class="prettyprint"><code class=" hljs lasso">R2(config)<span class="hljs-variable">#crypto</span> <span class="hljs-built_in">map</span> ikev2<span class="hljs-attribute">-map</span> <span class="hljs-number">10</span> ipsec<span class="hljs-attribute">-isakmp</span>
+Crypto <span class="hljs-built_in">Map</span> configuration commands:
+  default        <span class="hljs-built_in">Set</span> a command <span class="hljs-keyword">to</span> its defaults
+  description    Description of the crypto <span class="hljs-built_in">map</span> statement policy
+  dialer         Dialer related commands
+  exit           Exit from crypto <span class="hljs-built_in">map</span> configuration mode
+  <span class="hljs-keyword">match</span>          <span class="hljs-keyword">Match</span> values<span class="hljs-built_in">.</span>
+  no             Negate a command <span class="hljs-literal">or</span> <span class="hljs-built_in">set</span> its defaults
+  qos            Quality of Service related commands
+  reverse<span class="hljs-attribute">-route</span>  Reverse Route Injection<span class="hljs-built_in">.</span>
+  <span class="hljs-built_in">set</span>            <span class="hljs-built_in">Set</span> values for encryption/decryption</code></pre>
+
+
+
+<h2 id="配置步骤">配置步骤</h2>
+
+<ol>
+<li>通过ikev2 proposal定义 Encryption，Hash Algorithm，Diffie-Hellman group，这一步类似于IKEv1中的“crypto isakmp policy”。</li>
+<li>通过policy去调用proposal，这样做的好处是，当需要配置多个VPN的时候，不需要每一个VPN去配置Encryption，Hash Algorithm，Diffie-Hellman group这些信息，直接调用之前配置好的proposal即可。</li>
+<li>配置keying，在keying中配置对等体的IP地址，并且配置预共享密钥。</li>
+<li>配置profile配置集合，确定认证方式和调用秘钥</li>
+<li>配置transform-set指定ipsec vpn模式，传输模式or隧道模式。</li>
+<li>配置感兴趣的数据流，通过ACL。</li>
+<li>配置crypto map集合，并在接口下应用。</li>
+</ol>
+
+<p>因为配置命令比较麻烦，我经常使用PPKP（proposal-&gt;policy-&gt;keyring-&gt;profile）来简化配置思路。</p>
+
+
+
+<h2 id="配置示例">配置示例</h2>
+
+<pre><code>crypto ikev2 proposal ikev2-proposal
+ encryption<a href="#fn:1" id="fnref:1" title="See footnote" class="footnote">1</a> aes-cbc-256
+ integrity<a href="#fn:2" id="fnref:2" title="See footnote" class="footnote">2</a> sha512
+ group<a href="#fn:3" id="fnref:3" title="See footnote" class="footnote">3</a> 16
+!
+crypto ikev2 policy ikev2-policy 
+ match fvrf<a href="#fn:4" id="fnref:4" title="See footnote" class="footnote">4</a> any
+ proposal<a href="#fn:5" id="fnref:5" title="See footnote" class="footnote">5</a> ikev2-proposal
+!
+crypto ikev2 keyring ikev2-keyring
+ peer<a href="#fn:6" id="fnref:6" title="See footnote" class="footnote">6</a> ccie43413
+  address<a href="#fn:7" id="fnref:7" title="See footnote" class="footnote">7</a> 12.1.1.1
+  pre-shared-key<a href="#fn:8" id="fnref:8" title="See footnote" class="footnote">8</a> local ccie43413
+  pre-shared-key<a href="#fn:9" id="fnref:9" title="See footnote" class="footnote">9</a> remote ccie43413
+ !
+!
+crypto ikev2 profile ikev2-profile
+ match identity remote address 12.1.1.1 255.255.255.255 <a href="#fn:10" id="fnref:10" title="See footnote" class="footnote">10</a>
+ authentication remote pre-share<a href="#fn:11" id="fnref:11" title="See footnote" class="footnote">11</a>
+ authentication local pre-share <a href="#fn:12" id="fnref:12" title="See footnote" class="footnote">12</a>
+ keyring local ikev2-keyring<a href="#fn:13" id="fnref:13" title="See footnote" class="footnote">13</a>
+!
+crypto ipsec transform-set ikev2-transform-set esp-aes esp-sha-hmac 
+ mode tunnel
+!
+crypto map ikev2-map 10 ipsec-isakmp 
+ set peer 12.1.1.1
+ set transform-set ikev2-transform-set 
+ set ikev2-profile ikev2-profile
+ match address vpn
+!
+ip access-list extended vpn
+ permit ip host 10.1.1.1 host 20.1.1.1
+!
+</code></pre>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<p>1.<a href="http://www.cisco.com/en/US/docs/ios-xml/ios/sec_conn_ikevpn/configuration/15-1mt/Configuring_Internet_Key_Exchange_Version_2.html#GUID-E33A61BF-7D79-4F69-9A71-257D6D643E4B">Configuring Internet Key Exchange Version 2 (IKEv2)</a></p>
+
+<p>2.<a href="http://www.cisco.com/c/en/us/support/docs/ip/internet-key-exchange-ike/117258-config-l2l.html">IKEv1/IKEv2 Between Cisco IOS and strongSwan Configuration Example</a></p>
+
+<p>3.<a href="http://www.cisco.com/c/en/us/td/docs/ios/12_2/security/command/reference/srfipsec.html#wp1017694">IPSec Network Security Commands</a></p>
+
+
+
+<h2 id="脚注">脚注</h2>
+
+<div class="footnotes"><hr><ol><li id="fn:1">Specifies one or more transforms of the encryption type. <a href="#fnref:1" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:2">Specifies one or more transforms of the integrity algorithm type <a href="#fnref:2" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:3">Specifies the Diffie-Hellman (DH) group identifier.A generally acccepted guideline recommends the use of a 2048-bit group after 2013 (until 2030). Either group 14 or group 24 can be selected to meet this guideline <a href="#fnref:3" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:4">(Optional) Matches the policy based on a user-configured FVRF or any FVRF.这部分详细，请参阅<a href="http://www.cisco.com/c/en/us/td/docs/interfaces_modules/shared_port_adapters/configuration/6500series/sipspasw/76cfvpna.pdf">Configuring VPNs in VRF Mode</a> <a href="#fnref:4" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:5">Specifies the proposals that must be used with the policy. <a href="#fnref:5" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:6">Defines the peer or peer group and enters IKEv2 keyring peer configuration mode. <a href="#fnref:6" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:7">Specifies an IPv4 or IPv6 address or range for the peer. <a href="#fnref:7" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:8">Specifies the preshared key for the peer <a href="#fnref:8" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:9">Specifies the preshared key for the peer <a href="#fnref:9" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:10">Use the match statements to select an IKEv2 profile for a peer: <a href="#fnref:10" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:11">Specifies the local or remote authentication method. <a href="#fnref:11" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:12">Specifies the local or remote authentication method. <a href="#fnref:12" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:13">Specifies the local or AAA-based keyring that must be used with the local and remote preshared key authentication method <a href="#fnref:13" title="Return to article" class="reversefootnote">↩</a></li></ol></div></div></body>
+</html>

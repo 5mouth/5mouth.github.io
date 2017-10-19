@@ -1,0 +1,277 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+<title>加密设备NAT对IPSec VPN的影响 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ipsec-vpn-private-to-private-network-with-nat-and-a-static">IPsec VPN Private-to-Private Network with NAT and a Static</h1>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<p>在NAT网络中运行IPSec VPN会面临各种各样的问题，本文仅拿 NAT 与crypto map 处理顺序的问题来进行讨论。<a href="#fn:2" id="fnref:2" title="See footnote" class="footnote">1</a><a href="#fn:3" id="fnref:3" title="See footnote" class="footnote">2</a>
+
+</p>
+
+<h5 id="拓扑图如下">拓扑图如下：</h5>
+
+
+
+<pre class="prettyprint"><code class=" hljs brainfuck">     <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span><span class="hljs-comment">12</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span>           <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">\</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span><span class="hljs-comment">23</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">2</span>           <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">\</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span><span class="hljs-comment">34</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">3</span>           <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>
+     <span class="hljs-comment">|</span> <span class="hljs-comment">R1</span>  <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">F0/0</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span> <span class="hljs-comment">R2</span>  <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">F0/1</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span> <span class="hljs-comment">R3</span>  <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">F0/0</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span> <span class="hljs-comment">R4</span>  <span class="hljs-comment">|</span>
+     <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>           <span class="hljs-comment">12</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">2</span><span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>           <span class="hljs-comment">23</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">3</span><span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>           <span class="hljs-comment">34</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">4</span><span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span></code></pre>
+
+<p>R2与R3是两个站点的网关设备，负责建立VPN和NAT地址转换的工作。R1与R4是客户端设备。 <br>
+需求： <br>
+1.R1-to-R4 走IPSec VPN流量。 <br>
+2.不能影响现有NAT转换。 <br>
+之前有介绍过GRE over IPSec VPN的技术，此方法可以完美解决此问题，但不在本文讨论范围内。</p>
+
+<p>首先需要了解的就是NAT操作顺序(NAT Order of Operation<a href="#fn:1" id="fnref:1" title="See footnote" class="footnote">3</a>)见下表。</p>
+
+<table>
+<thead>
+<tr>
+  <th>NAT Overview</th>
+  <th>Inside-to-Outside</th>
+  <th>Outside-to-Inside</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>1</td>
+  <td>If IPSec then check input access list</td>
+  <td>If IPSec then check input access list</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>decryption - for CET (Cisco Encryption Technology) or IPSec</td>
+  <td><strong>decryption - for CET or IPSec </strong></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>check input access list</td>
+  <td>check input access list</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>check input rate limits</td>
+  <td>check input rate limits</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>input accounting</td>
+  <td>input accounting</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>redirect to web cache</td>
+  <td>redirect to web cache</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>policy routing</td>
+  <td><strong>NAT outside to inside (global to local translation)</strong></td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>routing</td>
+  <td>policy routing</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><strong>NAT inside to outside (local to global translation)</strong></td>
+  <td>routing</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><strong>crypto (check map and mark for encryption)</strong></td>
+  <td>crypto (check map and mark for encryption)</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td>check output access list</td>
+  <td>check output access list</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td>inspect (Context-based Access Control (CBAC))</td>
+  <td>inspect CBAC</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td>TCP intercept</td>
+  <td>TCP intercept</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td>encryption</td>
+  <td>encryption</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td>Queueing</td>
+  <td>Queueing</td>
+</tr>
+</tbody></table>
+
+
+<p>观察可以发现，从“内到外”先执行 NAT的操作步骤。那么12.1.1.1 to 34.1.1.4，会先被转换成 23.1.1.2 to 34.1.1.4 ,使得之前配置的感兴趣流无法匹配而导致IPSec VPN无法建立。</p>
+
+<p>所以知道了问题的原因，那么解决的办法就是，在NAT 的access-list中剔除 IPSec VPN的感兴趣的流，<strong>使得感兴趣的数据流不进行NAT转换</strong>，而执行IPSec VPN的工作流程。关键配置如下。</p>
+
+<pre><code>ip nat inside source list 100 interface FastEthernet0/1 overload
+access-list 100 deny   ip host 12.1.1.1 host 34.1.1.4
+access-list 100 permit ip 12.1.1.0 0.0.0.255 34.1.1.0 0.0.0.255
+</code></pre>
+
+
+
+<h2 id="配置关键配置">配置(关键配置)</h2>
+
+<pre><code>R2#show running-config 
+!--------------------------------------------------------------- crypto configuration
+crypto ikev2 proposal ikev2-proposal 
+ encryption aes-cbc-256
+ integrity sha512
+ group 16
+!
+crypto ikev2 policy ikev2-policy 
+ match fvrf any
+ proposal ikev2-proposal
+!
+crypto ikev2 keyring ikev2-keyring
+ peer ccie43413
+  address 23.1.1.3
+  pre-shared-key local ccie43413
+  pre-shared-key remote ccie43413
+ !
+!
+crypto ikev2 profile ikev2-profile
+ match identity remote address 23.1.1.3 255.255.255.255 
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local ikev2-keyring
+!
+crypto ipsec transform-set ikev2-transform-set esp-aes esp-sha-hmac 
+ mode tunnel
+!
+crypto map ikev2-map 10 ipsec-isakmp 
+ set peer 23.1.1.3
+ set transform-set ikev2-transform-set 
+ set ikev2-profile ikev2-profile
+ match address vpn
+!--------------------------------------------------------------- crypto configuration
+interface FastEthernet0/0
+ ip address 12.1.1.2 255.255.255.0
+ ip nat inside
+ ip ospf 1 area 0
+!
+interface FastEthernet0/1
+ ip address 23.1.1.2 255.255.255.0
+ ip nat outside
+ ip ospf 1 area 0
+ crypto map ikev2-map
+!
+router ospf 1
+!--------------------------------------------------------------- NAT配置
+ip nat inside source list 100 interface FastEthernet0/1 overload
+!
+ip access-list extended vpn
+ permit ip host 12.1.1.1 host 34.1.1.4
+!--------------------------------------------------------------- 不对ipsec vpn 感兴趣的数据流进行NAT转换操作
+access-list 100 deny   ip host 12.1.1.1 host 34.1.1.4
+access-list 100 permit ip 12.1.1.0 0.0.0.255 34.1.1.0 0.0.0.255
+!
+end
+R2# 
+
+
+
+R3#show running-config 
+!
+crypto ikev2 proposal ikev2-proposal 
+ encryption aes-cbc-256
+ integrity sha512
+ group 16
+!
+crypto ikev2 policy ikev2-policy 
+ match fvrf any
+ proposal ikev2-proposal
+!
+crypto ikev2 keyring ikev2-keyring
+ peer ccie43413
+  address 23.1.1.2
+  pre-shared-key local ccie43413
+  pre-shared-key remote ccie43413
+ !
+!
+crypto ikev2 profile ikev2-profile
+ match identity remote address 23.1.1.2 255.255.255.255 
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local ikev2-keyring
+!
+crypto ipsec transform-set ikev2-transform-set esp-aes esp-sha-hmac 
+ mode tunnel
+!
+crypto map ikev2-map 10 ipsec-isakmp 
+ set peer 23.1.1.2
+ set transform-set ikev2-transform-set 
+ set ikev2-profile ikev2-profile
+ match address vpn
+!
+interface FastEthernet0/0
+ ip address 34.1.1.3 255.255.255.0
+ ip nat inside
+ ip ospf 1 area 0
+!
+interface FastEthernet0/1
+ ip address 23.1.1.3 255.255.255.0
+ ip nat outside
+ ip ospf 1 area 0
+ crypto map ikev2-map
+!
+router ospf 1
+!
+ip nat inside source list 100 interface FastEthernet0/1 overload
+ip nat inside source static 34.1.1.4 12.1.1.1 route-map not-nat
+!
+ip access-list extended vpn
+ permit ip host 34.1.1.4 host 12.1.1.1
+!
+access-list 100 deny   ip host 34.1.1.4 host 12.1.1.1
+access-list 100 permit ip 34.1.1.0 0.0.0.255 12.1.1.0 0.0.0.255
+access-list 101 deny   ip host 34.1.1.4 host 12.1.1.1
+access-list 101 permit ip 34.1.1.0 0.0.0.255 12.1.1.0 0.0.0.255
+!
+route-map not-nat permit 10
+ match ip address 101
+!
+end
+R3#
+</code></pre>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<div class="footnotes"><hr><ol><li id="fn:2"><a href="http://www.cisco.com/c/en/us/support/docs/security-vpn/ipsec-negotiation-ike-protocols/14144-static.html">Configuring a Router IPsec Tunnel Private-to-Private Network with NAT and a Static</a> <a href="#fnref:2" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:3">《IPSec VPN实战指南》5.3 加密设备NAT对IPSec VPN的影响N <a href="#fnref:3" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:1"><a href="http://www.cisco.com/c/en/us/support/docs/ip/network-address-translation-nat/6209-5.html">NAT Order of Operation</a>  <a href="#fnref:1" title="Return to article" class="reversefootnote">↩</a></li></ol></div></div></body>
+</html>

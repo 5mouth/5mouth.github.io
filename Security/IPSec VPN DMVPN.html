@@ -1,0 +1,708 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+<title>IPSec VPN DMVPN - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ipsec-vpn-dmvpn">IPSec VPN DMVPN</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#ipsec-vpn-dmvpn">IPSec VPN DMVPN</a><ul>
+<li><a href="#介绍">介绍</a><ul>
+<li><a href="#星形拓扑star-topologyhub-and-spoke">星形拓扑（Star Topology，Hub and Spoke ）</a></li>
+<li><a href="#全网状拓扑full-match-topology">全网状拓扑（Full Match Topology）</a></li>
+<li><a href="#dmvpndynamic-multipoint-vpn">DMVPN（Dynamic Multipoint VPN）</a></li>
+</ul>
+</li>
+<li><a href="#dmvpn组成协议">DMVPN组成协议</a><ul>
+<li><a href="#动态多点gremultipoint-gremgre">动态多点GRE（multipoint GRE，mGRE）</a></li>
+<li><a href="#下一跳解析协议next-hop-resolution-protocolnhrp">下一跳解析协议（Next Hop Resolution Protocol，NHRP）</a><ul>
+<li><a href="#nhrp简介">NHRP简介</a></li>
+<li><a href="#为什么需要nhrphow-mgre-uses-nhrp">为什么需要NHRP？（How mGRE Uses NHRP）</a></li>
+<li><a href="#nhrp如果工作how-nhrp-works">NHRP如果工作？（How NHRP Works）</a></li>
+<li><a href="#nhrp-registration-stage">NHRP Registration Stage</a><ul>
+<li><a href="#nhrp-registration-request">NHRP Registration Request</a></li>
+<li><a href="#nhrp-registration-reply">NHRP Registration Reply</a></li>
+</ul>
+</li>
+<li><a href="#nhrp-resolution-stage">NHRP Resolution Stage</a><ul>
+<li><a href="#nhrp-resolution-request-and-nhrp-resolution-reply">NHRP Resolution Request and NHRP Resolution Reply</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#配置关键配置">配置(关键配置)</a><ul>
+<li><a href="#接口ip地址配置nhrp配置">接口ip地址配置，NHRP配置</a></li>
+<li><a href="#ipsec-vpn-配置">IPsec VPN 配置</a></li>
+</ul>
+</li>
+<li><a href="#附录">附录</a><ul>
+<li><a href="#nhrp工作过程报文收发">NHRP工作过程报文收发</a></li>
+<li><a href="#nhrp-resolution-debug">NHRP Resolution debug</a></li>
+<li><a href="#dmvpn配置简单说明">DMVPN配置简单说明</a></li>
+</ul>
+</li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<p>在之前介绍的IPSec VPN中大多都是 Site to Site 的模型。然而在实际应用中，中心到分支的结构，来看看这种情况下会遇到哪些问题。<a href="#fn:1" id="fnref:1" title="See footnote" class="footnote">1</a>
+
+</p>
+
+<h3 id="星形拓扑star-topologyhub-and-spoke">星形拓扑（Star Topology，Hub and Spoke ）</h3>
+
+<pre><code>          +-------+          
+          |  Hub  |          
+          +-------+          
+         /    |    \         
+        /     |     \        
+       /      |      \       
++-----+    +-----+   +-----+
+|Spoke|    |Spoke|   |Spoke|
++-----+    +-----+   +-----+
+</code></pre>
+
+<p>1. 每增加一个分支站点，在中心设备上就要多增加一份配置。 <br>
+ 2. Spoke to Spoke时，流量会先到Hub上，第一次加密。再由Hub进行路由查找后进行二次加密发送到Spoke上，数据被两次加解密增加的处理数据包的成本。 <br>
+ 3. 当Spoke to Spoke 的流量过大时，会占用Hub的带宽，如果前期流量规划不足，可能会影响到其他正常Spoke 的通信。</p>
+
+
+
+<h3 id="全网状拓扑full-match-topology">全网状拓扑（Full Match Topology）</h3>
+
+<pre><code>      +------+       
+      |  HUB |       
+      +------+       
+         /|\         
+        / | \        
+       /  |  \       
++-----+   |   +-----+
+|Spoke|---+---|Spoke|
++-----+   |   +-----+
+       \  |  /       
+        \ | /        
+         \!/         
+       +-----+       
+       |Spoke|       
+       +-----+       
+</code></pre>
+
+<p>1. 当Spoke数量较多的时候配置量巨大，维护成本高。 <br>
+   2. 每一个Spoke建立的每一个连接都要产生一个新的SA（安全关联），对于设备性能有一定的要求。 <br>
+   3. 必须清楚知道其他站点的IP地址，如果采用动态地址需要额外的部署成本。</p>
+
+
+
+<h3 id="dmvpndynamic-multipoint-vpn">DMVPN（Dynamic Multipoint VPN）</h3>
+
+<p>· 通过虚拟网状连接，提供Full Match连通性（multipoint GRE，mGRE） <br>
+· 分支站点支持动态地址 <br>
+· 增加新的分支站点，中心站点无需重新配置 <br>
+· 分支站点的流量通过动态产生的隧道进行封装</p>
+
+
+
+<h2 id="dmvpn组成协议">DMVPN组成协议</h2>
+
+<p>DMVPN有很好的兼容性以及扩展性，但是DMVPN是通过不同的协议组合进行使用的，如下就要介绍DMVPN 四大组成协议。</p>
+
+
+
+<h3 id="动态多点gremultipoint-gremgre">动态多点GRE（multipoint GRE，mGRE）</h3>
+
+<p>相比于传统的GRE隧道，mGRE提供了典型的NBMA（Non-Broadcast Multiple Access,NBMA）网络，而NBMA网络就是一个很典型的Hub and Spoke 的网络模型。Spoke to Spoke 的流量经过Hub进行转发，这保证了底层上的连通性。<a href="#fn:2" id="fnref:2" title="See footnote" class="footnote">2</a>
+
+</p>
+
+<h3 id="下一跳解析协议next-hop-resolution-protocolnhrp">下一跳解析协议（Next Hop Resolution Protocol，NHRP）</h3>
+
+
+
+<h4 id="nhrp简介">NHRP简介</h4>
+
+<p>通过mGRE保证了底层上的连通性，但是发现如果仅只有mGRE那么,当数据包要进行GRE封装的时候，发现并没有一个Destination地址去使用所以无法完成GRE封装，那么这个时候就需要NHRP解析 隧道地址和物理地址映射。 <br>
+如果Spoke仅仅获取到了hub点的信息，那么Spoke to Spoke 的流量就必须通过Hub进行转发，这样无疑增加了Hub的负担。所以NHRP通过先注册，再请求的方式，不仅仅让hub点获取到Spoke点信息，还保证了Spoke to Spoke，NHRP映射关系的解析。</p>
+
+<blockquote>
+  <p>NHRP的本质其实就是为NBMA网络地址提供映射表信息（VPN IP to NBMA IP address mapping）</p>
+</blockquote>
+
+<ul>
+<li><p>NHRP是一个“二层”缓存解析协议，这一点非常类似于 ARP 或 反向ARP（帧中继网络）（Spoke发送的广播、组播只能被Hub点收到） <br>
+NHRP is a layer two resolution protocol and cache like ARP or Reverse ARP (Frame Relay)</p></li>
+<li><p>在DMVPN中使用，将Tunnel IP地址映射到NBMA IP 地址 <br>
+It is used in DMVPN to map a tunnel IP address to an NBMA address</p></li>
+<li><p>与ARP一样，NHRP也有静态和动态的区分（通常在Spoke点配置静态NHRP，在hub点配置动态NHRP） <br>
+Like ARP, NHRP can have static and dynamic entries</p></li>
+</ul>
+
+
+
+<h4 id="为什么需要nhrphow-mgre-uses-nhrp">为什么需要NHRP？（How mGRE Uses NHRP）</h4>
+
+<p>如下是一个典型的mGRE配置</p>
+
+<pre><code>interface Tunnel 0
+ ip address 10.0.0.1 255.0.0.0
+ tunnel source Dialer1
+ tunnel mode gre multipoint
+ tunnel key 1
+</code></pre>
+
+<ol>
+<li><p>当数据包进入到路由器之后，进行路由查找，下一跳一起传递到mGRE接口。 <br>
+When a packet is routed, it is passed to the mGRE interface along with a next-hop</p></li>
+<li><p>下一跳是远程对等体的隧道地址。 <br>
+The next-hop is the tunnel address of a remote peer <br>
+<font color="#778899">到此，如果仅知道对方的隧道地址，是无法获知远端Peer 的物理地址的。无法完成封装再发送的过程。所以这时候就需要NHRP将隧道上的IP地址映射到NMBA IP地址（物理接口IP地址）</font></p></li>
+<li><p>mGRE查找Tunnel地址所对应的 NHRP cache中的next-hop address，并查找远程对等体的NBMA地址 <br>
+mGRE looks up the NHRP cache for the next-hop address and retrieves the NBMA address of the remote peer</p></li>
+<li><p>mGRE将数据包封装到GRE / IP有效载荷中 <br>
+mGRE encapsulates the packet into a GRE/IP payload</p></li>
+<li><p>新的数据包目的地址是NMBA的地址 <br>
+The new packet destination is the NMBA address</p></li>
+</ol>
+
+
+
+<h4 id="nhrp如果工作how-nhrp-works">NHRP如果工作？（How NHRP Works）</h4>
+
+<p>NHRP本质目的是需产生NHRP Cache，产生 NHRP Cache有如下三种方式。<a href="#fn:3" id="fnref:3" title="See footnote" class="footnote">3</a>
+
+</p><ul>
+<li>手动添加静态条目</li>
+<li>Hub通过注册请求（Registration requests）学习</li>
+<li>Spokes通过决议请求（Resolution requests）学习  <br>
+“Resolution” is for spoke to spoke</li>
+</ul>
+
+<p></p><p>如下是NHRP工作流程图，简述如下，具体报文交互情况，请参见附录。</p>
+
+
+
+<div class="sequence-diagram"><svg height="520" version="1.1" width="1193.1484375" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="overflow: hidden; position: relative; left: -0.5px; top: -0.21875px;"><desc style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Created with Raphaël 2.1.2</desc><defs style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><marker id="raphael-marker-endblock55-obj35" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj38" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj41" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj44" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj50" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj53" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj56" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker></defs><rect x="10" y="20" width="75.4375" height="40" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="20.203125" y="30" width="55.4375" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="47.71875" y="40" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">SpokeA</tspan></text><rect x="10" y="460" width="75.4375" height="40" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="20.203125" y="470" width="55.4375" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="47.71875" y="480" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">SpokeA</tspan></text><path fill="none" stroke="#000000" d="M47.71875,60L47.71875,460" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="523.875" y="20" width="50.84375" height="40" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="534.078125" y="30" width="30.84375" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="549.296875" y="40" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Hub</tspan></text><rect x="523.875" y="460" width="50.84375" height="40" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="534.078125" y="470" width="30.84375" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="549.296875" y="480" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Hub</tspan></text><path fill="none" stroke="#000000" d="M549.296875,60L549.296875,460" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="906.9296875" y="20" width="73.859375" height="40" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="916.921875" y="30" width="53.859375" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="943.859375" y="40" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">SpokeB</tspan></text><rect x="906.9296875" y="460" width="73.859375" height="40" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="916.921875" y="470" width="53.859375" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="943.859375" y="480" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">SpokeB</tspan></text><path fill="none" stroke="#000000" d="M943.859375,60L943.859375,460" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="160.1875" y="75" width="276.625" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="298.5078125" y="85" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">NHRP Registration Request(注册请求）</tspan></text><path fill="none" stroke="#000000" d="M47.71875,100C47.71875,100,492.00968927610666,100,544.2919726577188,100" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj35)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="214.578125" y="115" width="168.890625" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="298.5078125" y="125" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">NHRP Resolution Reply</tspan></text><path fill="none" stroke="#000000" d="M549.296875,140C549.296875,140,105.00593572389334,140,52.723652342281184,140" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj38)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="648.25" y="155" width="197.03125" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="746.578125" y="165" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">NHRP Registration Request</tspan></text><path fill="none" stroke="#000000" d="M943.859375,180C943.859375,180,600.0496952747926,180,554.3035342761993,180" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj41)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="662.65625" y="195" width="168.890625" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="746.578125" y="205" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">NHRP Resolution Reply</tspan></text><path fill="none" stroke="#000000" d="M549.296875,220C549.296875,220,893.1065547252074,220,938.8527157238007,220" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj44)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="963.859375" y="240" width="142.359375" height="30" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="969.09375" y="245" width="132.359375" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="1035.0390625" y="255" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Registration Stage</tspan></text><rect x="57.703125" y="285" width="481.578125" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="298.5078125" y="295" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Resolution Request"SpokeB"（决议请求）Destination“SpokeB” 。</tspan></text><path fill="none" stroke="#000000" d="M47.71875,310C47.71875,310,492.00968927610666,310,544.2919726577188,310" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj50)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="559.28125" y="325" width="374.5625" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="746.578125" y="335" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Resolution Request"SpokeB"，Source“SpokeA” 。</tspan></text><path fill="none" stroke="#000000" d="M549.296875,350C549.296875,350,893.1065547252074,350,938.8527157238007,350" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj53)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="427.96875" y="365" width="135.625" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="495.7890625" y="375" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Resolution Reply。</tspan></text><path fill="none" stroke="#000000" d="M943.859375,390C943.859375,390,124.43670664069941,390,52.71721772302137,390" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj56)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="963.859375" y="410" width="131.9375" height="30" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="969.09375" y="415" width="121.9375" height="20" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="1029.828125" y="425" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="6">Resolution Stage</tspan></text></svg></div>
+
+
+
+<h4 id="nhrp-registration-stage">NHRP Registration Stage</h4>
+
+<p>当Spoke NHRP接口被UP起来的时候，Spoke 会向NHS发送注册报文，以通告自己的NBMA网络地址映射关系。即对于Hub来说采用的是动态学习的方式（Registration）来更新自己的NHRP表项，对于Spoke 来说在Registration Stage（注册阶段）（）</p>
+
+
+
+<h5 id="nhrp-registration-request">NHRP Registration Request</h5>
+
+<p>NHRP注册请求用于向其NHS（Next Hop Server）注册NHC(Next Hop Resolution Protocol client )的NHRP(Next Hop Resolution Protocol)信息。</p>
+
+<p>Spokes设备Tunnel接口启用的时候，Spokes设备向Hub设备发送注册消息。以向Hub通知该站的NBMA信息。这样机制可以保证Hub节点动态的学习到client NBMA表项。</p>
+
+<p>HRP注册请求报文发送到NHS（Next Hop Server），用于通知NHS站点的NBMA信息。NHRP Packet Type: NHRP Registration Request (3)。</p>
+
+<p>在NHRP协议报文中需要注意的是Request id 字段，Request id是请求消息中唯一的标识符。该值直接从请求数据包（NHRP Registration Request）复制到回复的数据包（NHRP Registration Reply）中。当请求者收到 回复（Registration Reply）的时候，会将回复中的 request id和本地上未完成的请求列表中进行比较，当发现匹配时，请求被确认。（来自RFC 2332）</p>
+
+
+
+<h5 id="nhrp-registration-reply">NHRP Registration Reply</h5>
+
+<p>NHRP Registration Reply是NHS（Next Hop Server）发送给client以响应 NHRP Registration Request。NHRP Packet Type: NHRP Registration Reply (4)。</p>
+
+<p>当Hub收到注册消息之后将回复Registration Reply消息，以示确认。并回复自己的NBMA网络地址信息。</p>
+
+
+
+<h4 id="nhrp-resolution-stage">NHRP Resolution Stage</h4>
+
+<p>NHRP决议阶段主要用于解决Spoke to Spoke 通信的情况。当完成Registration（注册）之后，Spoke to Spoke没有NHRP表项，所以 Spoke to Spoke 必须经过Hub，但是NHRP有Resolution 机制，可以优化流量路径，使得Spoke to Spoke不需要经由Hub转发，Resolution Request和Resolution Reply就是完成这一功能的。</p>
+
+
+
+<h5 id="nhrp-resolution-request-and-nhrp-resolution-reply">NHRP Resolution Request and NHRP Resolution Reply</h5>
+
+<p>SpokeA，需要访问SpokeB，SpokeA先查询本地NHRP映射表，未发现SpokeB</p>
+
+<ol>
+<li><p>SpokeA发送Resolution Request到Hub节点。</p></li>
+<li><p>如果请求的节点在Hub上有NHRP映射表，则Hub发送Resolution Request，到此请求节点上（SpokeB），并声明请求源节点（SpokeA）。 <br>
+如果请求的节点在Hub上没有映射表，则回复 NHRP Error Indication，终止请求。</p></li>
+<li><p>当SpokeB收到了Hub发送过来的Resolution Request之后无误，学习SpokeA的NBMA地址信息，然后直接向SpokeA回复 Resolution Reply消息</p></li>
+<li><p>当SpokeA收到了Resolution Reply消息之后学习SpokeB NBMA地址信息，此时双方均已学习到了NBMA地址映射关系，后续的所有流量将直接遵循路由转发，不再经过Hub进行流量转发。</p></li>
+</ol>
+
+<p>有关这一部分的debug信息，请参加附录。</p>
+
+
+
+<h2 id="配置关键配置">配置(关键配置)</h2>
+
+<p>拓扑，如下配置命令有疑问的地方请参考Cisco配置手册或附录。</p>
+
+<pre><code>                   +-------+                  
+                   |  Hub  |                  
+                   +-------+                  
+                       |S1/0                  
+                       |                      
+                       |                      
+                       |S1/0                  
+                   +-------+                  
+     +-------------|Switch |-------------+    
+     |         S1/1+-------+S1/3         |    
+     |                 |S1/2             |    
+     |                 |                 |    
+     |                 |                 |    
+     |S1/0             |S1/0             |S1/0
+ +-------+         +-------+         +-------+
+ |Spoke-A|         |Spoke-B|         |Spoke-C|
+ +-------+         +-------+         +-------+
+</code></pre>
+
+
+
+<h3 id="接口ip地址配置nhrp配置">接口ip地址配置，NHRP配置</h3>
+
+<p><font color="#0000FF">Hub</font></p>
+
+<pre><code>!Hub
+interface Serial1/0
+ ip address 192.168.78.8 255.255.255.0
+ ip ospf 1 area 0
+!
+interface Tunnel1
+ ip address 172.168.1.8 255.255.255.0
+ no ip redirects
+ ip nhrp authentication 43413
+ ip nhrp map multicast dynamic
+ ip nhrp network-id 10
+ tunnel source 192.168.78.8
+ tunnel mode gre multipoint
+ tunnel key 43413
+</code></pre>
+
+<p><font color="#0000FF">SpokeA</font></p>
+
+<pre><code>!SpokeA
+interface Serial1/0
+ ip address 192.168.17.1 255.255.255.0
+ ip ospf 1 area 0
+!
+interface Tunnel1
+ ip address 172.168.1.1 255.255.255.0
+ no ip redirects
+ ip nhrp authentication 43413
+ ip nhrp map 172.168.1.8 192.168.78.8
+ ip nhrp map multicast 192.168.78.8
+ ip nhrp network-id 10
+ ip nhrp nhs 172.168.1.8
+ tunnel source 192.168.17.1
+ tunnel mode gre multipoint
+ tunnel key 43413
+end
+</code></pre>
+
+<p><font color="#0000FF">SpokeB</font>    </p>
+
+<pre><code>!SpokeB
+interface Serial1/0
+ ip address 192.168.27.2 255.255.255.0
+ ip ospf 1 area 0
+!
+interface Tunnel1
+ ip address 172.168.1.2 255.255.255.0
+ no ip redirects
+ ip nhrp authentication 43413
+ ip nhrp map 172.168.1.8 192.168.78.8
+ ip nhrp map multicast 192.168.78.8
+ ip nhrp network-id 10
+ ip nhrp nhs 172.168.1.8
+ tunnel source 192.168.27.2
+ tunnel mode gre multipoint
+ tunnel key 43413
+end
+</code></pre>
+
+<p><font color="#0000FF">SpokeC</font>      </p>
+
+<pre><code>!SpokeC
+interface Serial1/0
+ ip address 192.168.37.3 255.255.255.0
+ ip ospf 1 area 0
+!
+interface Tunnel1
+ ip address 172.168.1.3 255.255.255.0
+ no ip redirects
+ ip nhrp authentication 43413
+ ip nhrp map 172.168.1.8 192.168.78.8
+ ip nhrp map multicast 192.168.78.8
+ ip nhrp network-id 10
+ ip nhrp nhs 172.168.1.8
+ tunnel source 192.168.37.3
+ tunnel mode gre multipoint
+ tunnel key 43413
+end
+</code></pre>
+
+<p><font color="#0000FF">Switch</font>      </p>
+
+<pre><code>!Switch
+interface Serial1/0
+ description To-Hub
+ ip address 192.168.78.7 255.255.255.0
+  ip ospf 1 area 0
+!
+interface Serial1/1
+ description To-SpokeA
+ ip address 192.168.17.7 255.255.255.0
+ ip ospf 1 area 0
+!
+interface Serial1/2
+ description To-SpokeB
+ ip address 192.168.27.7 255.255.255.0
+ ip ospf 1 area 0
+!
+interface Serial1/3
+ description To-SpokeC
+ ip address 192.168.37.7 255.255.255.0
+ ip ospf 1 area 0
+end
+</code></pre>
+
+
+
+<h3 id="ipsec-vpn-配置">IPsec VPN 配置</h3>
+
+<p>对于IPSec VPN配置部分HuB、SpokeA,B,C配置均一致，直接使用即可。</p>
+
+<pre><code>crypto ikev2 keyring cisco-ikev2-keyring
+ peer dmvpn-node
+  description symmetric pre-shared key for the hub/spoke
+  address 0.0.0.0 0.0.0.0
+  pre-shared-key cisco123
+ !        
+!
+crypto ikev2 profile cisco-ikev2-profile
+ match identity remote address 0.0.0.0 
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local cisco-ikev2-keyring
+!
+crypto ipsec transform-set cisco-ts esp-3des esp-md5-hmac 
+ mode tunnel
+!
+crypto ipsec profile cisco-ipsec-ikev2
+ set transform-set cisco-ts 
+ set ikev2-profile cisco-ikev2-profile
+!
+interface Tunnel1
+ tunnel protection ipsec profile cisco-ipsec-ikev2
+</code></pre>
+
+
+
+<h2 id="附录">附录</h2>
+
+
+
+<h3 id="nhrp工作过程报文收发">NHRP工作过程报文收发</h3>
+
+<pre><code>                           +-------+          
+                           |  Hub  | 172.168.1.8  tunnel       
+                           +-------+ 192.168.78.8 interface    
+                          /         \         
+                         /           \        
+172.168.1.1 tunnel      /             \ 172.168.1.2 tunnel
+192.168.17.1 interface /               \ 192.168.27.2 interface
+               +-------+                +-------+
+               |Spoke-A|                |Spoke-B|
+               +-------+                +-------+
+
+===========================================Registration=========================================================
+Internet Protocol Version 4, Src: 192.168.17.1, Dst: 192.168.78.8【NHRP Registration Request】
+Generic Routing Encapsulation (NHRP)
+Next Hop Resolution Protocol (NHRP Registration Request)
+    NHRP Fixed Header                                      【NHRP报文固定信息 RFC2332 "5.1 NHRP Fixed Header"】
+        Address Family Number: IPv4 (0x0001)                     【RFC2332 "ar$afn"】
+        Protocol Type (short form): IPv4 (0x0800)                【RFC2332 "ar$pro.type"】
+        Protocol Type (long form): 0000000000                    【RFC2332 "ar$pro.type"】
+        Hop Count: 255                                           【RFC2332 "ar$hopcnt"】
+        Packet Length: 105                                       【RFC2332 "ar$pktsz"】
+        NHRP Packet Checksum: 0xab06 [correct]                   【RFC2332 "ar$chksum"】
+        Extension Offset: 52                                     【RFC2332 "ar$extoff"】
+        Version: 1 (NHRP - rfc2332)                              【RFC2332 "ar$op.version"】
+        NHRP Packet Type: NHRP Registration Request (3)          【RFC2332 "ar$op.type"】
+        Source Address Type/Len: NSAP format/4                   【RFC2332 "ar$shtl"】
+        Source SubAddress Type/Len: NSAP format/0                【RFC2332 "ar$sstl"】
+    NHRP Mandatory Part                                    【NHRP报文必须携带的 特定信息 RFC2332 "5.2.0 Mandatory Part"】
+        Source Protocol Len: 4                                   【RFC2332 "Src Proto Len"】
+        Destination Protocol Len: 4                              【RFC2332 "Dst Proto Len"】
+        Flags: 0x8002, Uniqueness Bit, Cisco NAT Supported       【RFC2332 "Flags"】
+        Request ID: 0x00010007 (65543)                           【RFC2332 "Request ID"】*
+        Source NBMA Address: 192.168.17.1                        【RFC2332 "Source NBMA Address"】(SpokeA，interface IP Address)
+        Source Protocol Address: 172.168.1.1                     【RFC2332 "Source Protocol Address"】(SpokeA，Tunnel IP Address)
+        Destination Protocol Address: 172.168.1.8                【RFC2332 "Destination Protocol Address"】（向Hub进行注册）
+        Client Information Entry
+    Responder Address Extension
+    Forward Transit NHS Record Extension
+    Reverse Transit NHS Record Extension
+    NHRP Authentication Extension
+    Cisco NAT Address Extension
+    End of Extension
+
+Internet Protocol Version 4, Src: 192.168.78.8, Dst: 192.168.17.1【NHRP Registration Reply】
+Generic Routing Encapsulation (NHRP)
+Next Hop Resolution Protocol (NHRP Registration Reply)
+    NHRP Fixed Header
+        Address Family Number: IPv4 (0x0001)
+        Protocol Type (short form): IPv4 (0x0800)
+        Protocol Type (long form): 0000000000
+        Hop Count: 255
+        Packet Length: 125
+        NHRP Packet Checksum: 0x8443 [correct]
+        Extension Offset: 52
+        Version: 1 (NHRP - rfc2332)
+        NHRP Packet Type: NHRP Registration Reply (4)           【标识 NHRP Packet Type】
+        Source Address Type/Len: NSAP format/4
+        Source SubAddress Type/Len: NSAP format/0
+    NHRP Mandatory Part
+        Source Protocol Len: 4
+        Destination Protocol Len: 4
+        Flags: 0x8002, Uniqueness Bit, Cisco NAT Supported
+        Request ID: 0x00010007 (65543)                           【与Registration Request信息一致】
+        Source NBMA Address: 192.168.17.1                        【与Registration Request信息一致】
+        Source Protocol Address: 172.168.1.1                     【与Registration Request信息一致】
+        Destination Protocol Address: 172.168.1.8                【与Registration Request信息一致】
+        Client Information Entry
+    Responder Address Extension
+    Forward Transit NHS Record Extension
+    Reverse Transit NHS Record Extension
+    NHRP Authentication Extension
+    Cisco NAT Address Extension
+    End of Extension
+===========================================Registration=========================================================
+
+
+===========================================Resolution=========================================================
+
+Internet Protocol Version 4, Src: 192.168.17.1, Dst: 192.168.78.8【NHRP Resolution Request】【SpokeA to NHS】
+Generic Routing Encapsulation (NHRP)
+Next Hop Resolution Protocol (NHRP Resolution Request)
+    NHRP Fixed Header
+        Address Family Number: IPv4 (0x0001)
+        Protocol Type (short form): IPv4 (0x0800)
+        Protocol Type (long form): 0000000000
+        Hop Count: 255
+        Packet Length: 85
+        NHRP Packet Checksum: 0xf12e [correct]
+        Extension Offset: 52
+        Version: 1 (NHRP - rfc2332)
+        NHRP Packet Type: NHRP Resolution Request (1)
+        Source Address Type/Len: NSAP format/4
+        Source SubAddress Type/Len: NSAP format/0
+    NHRP Mandatory Part
+        Source Protocol Len: 4
+        Destination Protocol Len: 4
+        Flags: 0xc802, Is Router, Authoritative, Stable Binding, Cisco NAT Supported
+        Request ID: 0x00000006 (6)
+        Source NBMA Address: 192.168.17.1                       【SpokeA，interface IP Address】
+        Source Protocol Address: 172.168.1.1                    【SpokeA，Tunnel IP Address】
+        Destination Protocol Address: 172.168.1.2               【SpokeB，Tunnel IP Address】
+        Client Information Entry
+    Responder Address Extension
+    Forward Transit NHS Record Extension
+    Reverse Transit NHS Record Extension
+    NHRP Authentication Extension
+    Cisco NAT Address Extension
+    End of Extension
+
+Internet Protocol Version 4, Src: 192.168.78.8, Dst: 192.168.27.2【NHRP Resolution Request】【Hub to SpokeB】
+Generic Routing Encapsulation (NHRP)
+Next Hop Resolution Protocol (NHRP Resolution Request)
+    NHRP Fixed Header
+    NHRP Mandatory Part
+        Source Protocol Len: 4
+        Destination Protocol Len: 4
+        Flags: 0xc802, Is Router, Authoritative, Stable Binding, Cisco NAT Supported
+        Request ID: 0x00000006 (6)
+        Source NBMA Address: 192.168.17.1
+        Source Protocol Address: 172.168.1.1
+        Destination Protocol Address: 172.168.1.2
+        Client Information Entry
+    Responder Address Extension
+    Forward Transit NHS Record Extension
+    Reverse Transit NHS Record Extension
+    NHRP Authentication Extension
+    Cisco NAT Address Extension
+    End of Extension
+
+Internet Protocol Version 4, Src: 192.168.27.2, Dst: 192.168.17.1【NHRP Resolution Reply】【SpokeB to SpokeA】
+Generic Routing Encapsulation (NHRP)
+Next Hop Resolution Protocol (NHRP Resolution Reply)
+    NHRP Fixed Header
+        Address Family Number: IPv4 (0x0001)
+        Protocol Type (short form): IPv4 (0x0800)
+        Protocol Type (long form): 0000000000
+        Hop Count: 255
+        Packet Length: 133
+        NHRP Packet Checksum: 0x1550 [correct]
+        Extension Offset: 60
+        Version: 1 (NHRP - rfc2332)
+        NHRP Packet Type: NHRP Resolution Reply (2)
+        Source Address Type/Len: NSAP format/4
+        Source SubAddress Type/Len: NSAP format/0
+    NHRP Mandatory Part
+        Source Protocol Len: 4
+        Destination Protocol Len: 4
+        Flags: 0xf802, Is Router, Authoritative, Stable Association, Uniqueness Bit, Stable Binding, Cisco NAT Supported
+        Request ID: 0x00000006 (6)                                  【与NHRP Resolution Request的值一致】
+        Source NBMA Address: 192.168.17.1
+        Source Protocol Address: 172.168.1.1
+        Destination Protocol Address: 172.168.1.2                【RFC2332 "Destination Protocol Address"】（向Hub进行注册）
+        Client Information Entry
+            Code: Success (0)                                       【RFC2332 Page 18 "Code"】
+            Prefix Length: 32                                       【RFC2332 “Prefix Length”】
+            Unused: 0                                               
+            Max Transmission Unit: 17912                            【RFC2332 “ Maximum Transmission Unit”】
+            Holding Time (s): 7200                                  【RFC2332 “Holding Time”】
+            Client Address Type/Len: NSAP format/4                  【RFC2332 “Cli Addr T/L”】
+            Client Sub Address Type/Len: NSAP format/0              【RFC2332 “Cli SAddr T/L”】
+            Client Protocol Length: 4                               【RFC2332 “Cli Proto Len”】
+            CIE Preference Value: 0                                 【RFC2332 “Preference”】
+            Client NBMA Address: 192.168.27.2                       【RFC2332 “Client NBMA Address”】（回复了请求的NBMA address）
+            Client Protocol Address: 172.168.1.2                    【RFC2332 “Client Protocol Address”】（回复的请求的 Tunnel IP Address）
+    Responder Address Extension
+    Forward Transit NHS Record Extension
+    Reverse Transit NHS Record Extension
+    NHRP Authentication Extension
+    Cisco NAT Address Extension
+    End of Extension
+===========================================Resolution=========================================================
+</code></pre>
+
+<p>完整的数据包可以在此下载。 <a href="https://drive.google.com/open?id=0B93yYDHcYIgCZUJWV1dReWhFNnM">数据包1</a>，<a href="https://drive.google.com/open?id=0B93yYDHcYIgCaWM0ejNFQjBKaTQ">数据包2</a>。</p>
+
+
+
+<h3 id="nhrp-resolution-debug">NHRP Resolution debug</h3>
+
+<p>SpokeA，需要访问SpokeB，SpokeA先查询本地NHRP映射表，未发现SpokeB <br>
+*Jul 20 15:22:43.523: NHRP: NHRP could not map 172.168.1.2 to NBMA, cache entry not found</p>
+
+<ol>
+<li><p>SpokeA发送Resolution Request到Hub节点。 <br>
+*Jul 20 15:22:43.527: NHRP: Sending packet to NHS 172.168.1.8 on Tunnel1 </p></li>
+<li><p>如果请求的节点在Hub上有NHRP映射表，则Hub转发NHRP Resolution Request报文，到此请求节点上（SpokeB） <br>
+*Jul 20 15:23:03.479: NHRP: Receive Resolution Request via Tunnel1 vrf 0, packet size: 85 <br>
+*Jul 20 15:23:03.483: NHRP: Forwarding request due to authoritative request. <br>
+如果请求的节点在Hub上没有映射表，则回复 NHRP Error Indication，终止请求。</p></li>
+<li><p>当SpokeB收到了Hub发送过来的Resolution Request之后无误，学习SpokeA的NBMA地址信息，然后直接向SpokeA回复 Resolution Reply消息 <br>
+*Jul 20 15:22:13.443: NHRP: NHRP could not map 172.168.1.1 to NBMA, cache entry not found <br>
+*Jul 20 15:22:13.459: NHRP: Updating with NHS cache for dst:172.168.1.1 <br>
+*Jul 20 15:22:13.547: NHRP: Send Resolution Reply via Tunnel1 vrf 0, packet size: 133</p></li>
+<li><p>当SpokeA收到了Resolution Reply消息之后学习SpokeB NBMA地址信息，此时双方均已学习到了NBMA地址映射关系，后续的所有流量将直接遵循路由转发，不再经过Hub进行流量转发。 <br>
+*Jul 20 15:22:43.727: NHRP: Receive Resolution Reply via Tunnel1 vrf 0, packet size: 133 <br>
+*Jul 20 15:22:43.743: NHRP: Successfully attached NHRP subblock for Tunnel Endpoints (VPN: 172.168.1.2, NBMA: 192.168.27.2) </p>
+
+<p>debug部分的完整信息，<a href="https://drive.google.com/file/d/0B93yYDHcYIgCT2hfeHlvdjdwbFU/view?usp=sharing">请在此下载</a>。</p></li>
+</ol>
+
+
+
+<h3 id="dmvpn配置简单说明">DMVPN配置简单说明</h3>
+
+<p><font color="#0000FF">Hub</font></p>
+
+<pre><code>!Hub
+interface Serial1/0
+ ip address 192.168.78.8 255.255.255.0
+ ip ospf 1 area 0
+!
+interface Tunnel1
+ ip address 172.168.1.8 255.255.255.0
+ no ip redirects
+ ip nhrp authentication 43413    !配置NHRP认证字符串，同一个NBMA网络环境中的设备必须配置相同的认证字符串。
+ ip nhrp map multicast dynamic   !使用动态的方式（注册方式），来生成NHRP映射表项。
+ ip nhrp network-id 10           !定义NHRP域，此参数本地唯一。当数据包从GRE接口进入的时候需要通过NHRP域来定义到不同的DMVPN中。
+ tunnel source 192.168.78.8      !配置GRE隧道源地址。
+ tunnel mode gre multipoint      !配置GRE隧道模式，mGRE。
+ tunnel key 43413                !配置GRE key
+</code></pre>
+
+<p><font color="#0000FF">SpokeA</font></p>
+
+<pre><code>!SpokeA
+interface Serial1/0
+ ip address 192.168.17.1 255.255.255.0
+ ip ospf 1 area 0
+!
+interface Tunnel1
+ ip address 172.168.1.1 255.255.255.0
+ no ip redirects
+ ip nhrp authentication 43413
+ ip nhrp map 172.168.1.8 192.168.78.8   !Configures static IP-to-NBMA address mapping on the station.
+ ip nhrp map multicast 192.168.78.8     !添加NBMA地址以接收发送报文。
+ ip nhrp network-id 10                  !定义NHRP域，此参数本地唯一。当数据包从GRE接口进入的时候需要通过NHRP域来定义到不同的DMVPN中。
+ ip nhrp nhs 172.168.1.8                !配置NHS（ Next Hop Server）服务器地址（发送注册报文的服务器地址）
+ tunnel source 192.168.17.1             !配置GRE隧道源地址。
+ tunnel mode gre multipoint
+ tunnel key 43413
+end
+</code></pre>
+
+<p><font color="#0000FF">IPsec VPN configure</font></p>
+
+<pre><code>crypto ikev2 keyring cisco-ikev2-keyring                       !配置IKEv2 keyring 
+ peer dmvpn-node                                               !Configure a Peer and associated keys
+  description symmetric pre-shared key for the hub/spoke
+  address 0.0.0.0 0.0.0.0                                      !因为是动态的方式，所以地址为0.0.0.0
+  pre-shared-key cisco123                                      !配置预共享密钥“cisco123”
+ !        
+!
+crypto ikev2 profile cisco-ikev2-profile                       !配置ikev2 profile 
+ match identity remote address 0.0.0.0                         !因为是动态的方式，所以地址为0.0.0.0
+ authentication remote pre-share                               !均采用预共享密钥方式进行认证
+ authentication local pre-share                                !均采用预共享密钥方式进行认证
+ keyring local cisco-ikev2-keyring                             !调用之前配置的“keyring”
+!
+crypto ipsec transform-set cisco-ts esp-3des esp-md5-hmac      !配置transform
+ mode tunnel
+!
+crypto ipsec profile cisco-ipsec-ikev2                         !配置IKEv2 profile
+ set transform-set cisco-ts                                    !调用之前配置的transform
+ set ikev2-profile cisco-ikev2-profile                         !调用之前的profile—&gt;keyring
+!
+interface Tunnel1
+ tunnel protection ipsec profile cisco-ipsec-ikev2             !接口下应用，保护tunnel口上的流量。
+</code></pre>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<div class="footnotes"><hr><ol><li id="fn:1">《cisco ipsec vpn实战指南》秦柯 著 P 169 <br>
+          <a href="http://support.huawei.com/enterprise/docinforeader!loadDocument1.action?contentId=DOC1000060582&amp;partNo=100112">DSVPN配置</a> <br>
+<a href="http://www.cisco.com/c/en/us/support/docs/security-vpn/ipsec-negotiation-ike-protocols/41940-dmvpn.html">Dynamic Multipoint IPsec VPNs (Using Multipoint GRE/NHRP to Scale IPsec VPNs)</a> <a href="#fnref:1" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:2"><a href="http://www.cisco.com/c/dam/en/us/products/collateral/security/dynamic-multipoint-vpn-dmvpn/prod_presentation0900aecd80313c9d.pdf">DYNAMIC MULTIPOINT VPN HUB AND SPOKE INTRODUCTION NOVEMBER 2004</a> <a href="#fnref:2" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:3">RFC2332 <a href="#fnref:3" title="Return to article" class="reversefootnote">↩</a></li></ol></div></div></body>
+</html>

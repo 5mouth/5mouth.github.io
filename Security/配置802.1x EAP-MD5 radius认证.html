@@ -1,0 +1,145 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+<title>配置802.1x EAP-MD5 radius认证 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="配置8021x-eap-md5-radius认证">配置802.1x EAP-MD5 radius认证</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#配置8021x-eap-md5-radius认证">配置802.1x EAP-MD5 radius认证</a><ul>
+<li><a href="#介绍">介绍</a></li>
+<li><a href="#如何配置8021x">如何配置802.1x</a><ul>
+<li><a href="#全局下开启8021x认证接口下开启8021x认证">全局下开启802.1x认证，接口下开启802.1x认证</a></li>
+<li><a href="#配置aaa的radius认证服务器">配置AAA的Radius认证服务器</a></li>
+</ul>
+</li>
+<li><a href="#acs53安装视频">ACS5.3安装(视频）</a></li>
+<li><a href="#采用radius方式进行8021x认证实验视频">采用radius方式进行802.1x认证（实验视频）</a></li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<ol>
+<li>如何配置802.1x</li>
+<li>ACS5.3安装(视频）</li>
+<li>采用radius方式进行802.1x认证（实验）</li>
+</ol>
+
+
+
+<h2 id="如何配置8021x">如何配置802.1x</h2>
+
+<ol>
+<li>全局下开启802.1x认证，接口下开启802.1x认证</li>
+<li>配置AAA的Radius认证服务器</li>
+</ol>
+
+
+
+<h3 id="全局下开启8021x认证接口下开启8021x认证">全局下开启802.1x认证，接口下开启802.1x认证</h3>
+
+<pre><code>R12(config)#dot1x system-auth-control
+R12(config-if)#dot1x port-control auto 
+</code></pre>
+
+<p><strong>auto</strong>参数说明</p>
+
+<pre><code>R12(config-if)#dot1x port-control
+auto                PortState will be set to AUTO
+force-authorized    PortState set to Authorized
+force-unauthorized  PortState will be set to UnAuthorized 
+</code></pre>
+
+<blockquote>
+  <p><strong>Auto</strong> —enables 802.1x authentication and causes the port to begin in the unauthorized state, allowing only EAPOL frames to be sent and received through the port. The authentication process begins when the link state of the port changes from down to up or when an EAPOL-start frame is received. The switch requests the identity of the client and begins relaying authentication messages between the client and the authentication server. Each client attempting to access the network is uniquely identified by the switch by using the client MAC address.</p>
+  
+  <p><strong>force</strong>-authorized —disables 802.1x authentication and causes the port to change to the authorized state without any authentication exchange required. The port sends and receives normal traffic without 802.1x-based authentication of the client. This is the default setting.</p>
+  
+  <p><strong>force-unauthorized</strong> —causes the port to remain in the unauthorized state, ignoring all attempts by the client to authenticate. The switch cannot provide authentication services to the client through the port.</p>
+</blockquote>
+
+
+
+<h3 id="配置aaa的radius认证服务器">配置AAA的Radius认证服务器</h3>
+
+<p>激活3A认证</p>
+
+<pre><code>R12(config)#aaa new-model
+</code></pre>
+
+<p>配置802.1x采用radius方式进行认证</p>
+
+<pre><code>R12(config)#aaa authentication dot1x default group radius
+</code></pre>
+
+<p>配置Radius Server</p>
+
+<pre><code>R12(config)#radius-server host 192.168.119.119 auth-port 1645 acct-port 1646 key cisco 
+</code></pre>
+
+<blockquote>
+  <p>**注：**If auth-port and acct-port are not specified, the default value of auth-port is 1645 and the default value of acct-port is 1646</p>
+</blockquote>
+
+<p>配置ACS Radius认证服务器 <br>
+Network Resources—&gt;Network Devices and AAA Clients ，在此添加AAA认证客户端（设备IP，不是PC的IP）</p>
+
+<p><img src="https://lh3.googleusercontent.com/-LA1ogyWB77Y/Wd7AeJ8j0eI/AAAAAAAAAgM/pI3hAsquxLky6dyQBiaUjCWBOKBd6NOlwCLcBGAs/s0/1.jpg" alt="enter image description here" title="1.jpg"></p>
+
+<p>Users and Identity Stores—&gt;Internal Identity Stores—&gt;Users,在此创建用户</p>
+
+<p><img src="https://lh3.googleusercontent.com/-eco1eSEt7iA/Wd7AqTJGHQI/AAAAAAAAAgU/J-UyTb9kOwk_RrTsHxWKSOahXXqg_biqwCLcBGAs/s0/2.jpg" alt="enter image description here" title="2.jpg"></p>
+
+<p>配置完成之后可以在设备上使用“<strong>test aaa group radius</strong> <em>用户名 密码</em> <strong>new-code</strong>” 命令来测试用户是否正常，详细信息请参考<a href="https://www.cisco.com/c/en/us/td/docs/ios/12_2sb/12_2sba/feature/guide/sbaaacmd.html">Enhanced Test Command</a>。</p>
+
+<p>至此配置802.1x任务完成。</p>
+
+
+
+<h2 id="acs53安装视频">ACS5.3安装(视频）</h2>
+
+<p>参见：<a href="https://www.youtube.com/watch?v=C1iy2xiErj4">https://www.youtube.com/watch?v=C1iy2xiErj4</a></p>
+
+
+
+<h2 id="采用radius方式进行8021x认证实验视频">采用radius方式进行802.1x认证（实验视频）</h2>
+
+<p>参见：<a href="https://www.youtube.com/watch?v=MlpFnE6Lemc">https://www.youtube.com/watch?v=MlpFnE6Lemc</a></p>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li><a href="http://www.cisco.com/c/en/us/td/docs/switches/lan/catalyst3750x_3560x/software/release/12-2_55_se/configuration/guide/3750xscg/sw8021x.html">Configuring IEEE 802.1x Port-Based Authentication</a></li>
+<li><a href="https://www.cisco.com/c/en/us/td/docs/ios/12_2/security/command/reference/srfrad.html">RADIUS Commands</a></li>
+<li><a href="https://www.cisco.com/c/en/us/td/docs/ios/12_2sb/12_2sba/feature/guide/sbaaacmd.html">Enhanced Test Command</a></li>
+</ol>
+
+<p><em>2017年10月12日更新</em></p></div></body>
+</html>

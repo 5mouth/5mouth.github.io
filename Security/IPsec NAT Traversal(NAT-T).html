@@ -1,0 +1,304 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+<title>IPsec NAT Traversal(NAT-T) - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ipsec-nat-traversalnat-t">IPsec NAT Traversal(NAT-T)</h1>
+
+<h2 id="介绍">介绍</h2>
+
+<p>本文的大部分内容来自RFC5996 2.23.  NAT Traversal<a href="#fn:2" id="fnref:2" title="See footnote" class="footnote">1</a>IPsec NAT Transparency<a href="#fn:1" id="fnref:1" title="See footnote" class="footnote">2</a>，若存在不准确表述和理解请告知，谢谢。</p>
+
+<p>NAT（PAT）是一种解决IP地址短缺的技术手段，负责将内部地址翻译成公网地址，因为修改了源地址，公网在回复数据包的时候会将数据包发送到NAT网关,网关需要将目的地址翻译成内部地址将数据包路由到正确设备上。</p>
+
+
+
+<h3 id="ah封装ah-encapsulation">AH封装（AH Encapsulation）</h3>
+
+<p><strong>Transport mode and Tunnel mode</strong></p>
+
+<pre><code>    AH Transport
+    +--------------------++---------++-------------+
+    |Original IPv4 Header||AH Header||Original Data|
+    +--------------------++---------++-------------+
+    AH Tunnel 
+    +-------------------------++---------++--------------------++-------------+
+    |New IPv4 Header for IPsec||AH Header||Original IPv4 Header||Original Data|
+    +-------------------------++---------++--------------------++-------------+
+</code></pre>
+
+<p>AH 提供源认证和完整性校验，但是不提供加密服务，所以数据包会计算一个哈希值填写在AH Header中，但是数据包经过NAT 设备之后，会修改报文中的源IP地址，对端收到数据包之后进行反向哈希计算，因为报文被修改而导致哈希值不匹配，所以会导致校验失败而丢弃。</p>
+
+
+
+<h3 id="esp封装esp-encapsulation">ESP封装（ESP Encapsulation）</h3>
+
+<p><strong>Transport mode </strong></p>
+
+<pre><code>    ESP Transport
+    +--------------------++----------++-------------++-----------++-------+
+    |Original IPv4 Header||ESP Header||Original Data||ESP Trailer||ESP ICV|
+    +--------------------++----------++-------------++-----------++-------+
+</code></pre>
+
+<p>当用户传递数据包是TCP或UDP报文的时候，TCP会强制计算伪头部（Pseudo Header）<a href="#fn:3" id="fnref:3" title="See footnote" class="footnote">3</a> 。伪头部计算的内容是，<strong>Source Address 、Destination Address 、Reserved 、Protocol、TCP Length。</strong></p>
+
+<p>正常情况下，TCP报文通过NAT设备，转换源地址，NAT设备会重新计算一次伪头部，将重新计算的值填在TCP Checksum 中。但是因为ESP数据包是被加密的，这部分关键数据因为加密而无法获得。因此NAT设备无法获取信息计算校验和，从而导致接收方TCP 校验失败而丢弃包。</p>
+
+<blockquote>
+  <p><strong>说明:</strong> Changing the IP addresses in the IP header means the IP header checksum must be calculated. Since both UDP or TCP also have checksums, and these checksums are computed over a pseudo header that contains the IP source and destination address as well, they too must be recalculated each time a translation is made.<a href="#fn:4" id="fnref:4" title="See footnote" class="footnote">4</a>
+</p></blockquote>
+
+<p><strong>Tunnel mode</strong></p>
+
+<pre><code>    ESP Tunnel
+    +-------------------------++----------++--------------------++-------------++-----------++-------+
+    |New IPv4 Header for IPsec||ESP Header||Original IPv4 Header||Original Data||ESP Trailer||ESP ICV|
+    +-------------------------++----------++--------------------++-------------++-----------++-------+
+</code></pre>
+
+<p>只有ESP tunnel mode 可以应用在NAT-T的环境中。在通过NAT转换的时候修改的是外部的源IP地址（New IPv4 Header for IPsec），在进行完整性校验的时候校验的也是内部的数据Original IPv4 Header + Original Data 。所以不会修改TCP的校验和，TCP也就能正常通过校验。</p>
+
+
+
+<h3 id="esp-数据包nat转发">ESP 数据包NAT转发</h3>
+
+<p>NAT可以大致分为两类，一种是静态一对一的NAT转换，另外一种是多对一转换。在一对一的转换中ESP数据包转发并没有任何问题，但是结合实际情况，使用较多的是多对一转换方式，PAT方式。</p>
+
+<p>PAT是以传输层端口号来进行工作的，但是由于ESP没有传输层端口号，所以ESP在PAT环境中转发的时候就需要使用到NAT-T的方式，来进行工作。</p>
+
+<p>出于这个原因,IPSec将使用UDP封装ESP 数据包。当IPSec 检测到数据包沿途转发中存在NAT设备的时候，IPSec 将采用4500端口重新封装数据包。另外需要注意的是即使IKE初次建立的时候 启动器（initiator）可以直接使用IKE和ESP的端口4500，不管NAT是否存在 。 这种编码效率稍低，但对于NAT设备来说更容易处理。</p>
+
+<pre><code>Original Date       
++--------------------++-------------+       
+|Original IPv4 Header||Original Data|
++--------------------++-------------+   
+
+Not Enabled NAT-T       
++-------------------------++----------++--------------------++-------------++-----------++-------+
+|New IPv4 Header for IPsec||ESP Header||Original IPv4 Header||Original Data||ESP Trailer||ESP ICV|
++-------------------------++----------++--------------------++-------------++-----------++-------+
+
+Enabled NAT-T       
++-------------------------++----------++----------++--------------------++-------------++-----------++-------+
+|New IPv4 Header for IPsec||UDP Header||ESP Header||Original IPv4 Header||Original Data||ESP Trailer||ESP ICV|
++-------------------------++----------++----------++--------------------++-------------++-----------++-------+
+                                       ^           ^                                   ^            ^         
+                                       |           |                                   |            |         
+                                       |           +------------Encrypted -------------+            |               
+                                       |                                                            |         
+                                       +----------------------Authenticate--------------------------+         
+
+For NAT devices
++-------------------------++----------++----+
+|New IPv4 Header for IPsec||UDP Header||Data|
++-------------------------++----------++----+
+</code></pre>
+
+
+
+<h2 id="nat-traversal实现">NAT Traversal实现</h2>
+
+<ul>
+<li><p>IKE启动器（initiator ）和响应者（responder ）都必须在其IKE_SA_INIT数据包中包含通知类型为NAT_DETECTION_SOURCE_IP和NAT_DETECTION_DESTINATION_IP的有效载荷。  这些有效载荷可用于检测主机之间是否存在NAT,  IKE_SA_INIT数据包中有效负载的位置恰好在Ni(Nonce)和Nr(Nonce)有效载荷之后（在可选的CERTREQ(Certificate Request)有效载荷之前）。</p>
+
+<pre><code> Type Payload: Notify (41) - NAT_DETECTION_SOURCE_IP
+    Next payload: Notify (41)
+    0... .... = Critical Bit: Not Critical
+    Payload length: 28
+    Protocol ID: IKE (1)
+    SPI Size: 0
+    Notify Message Type: NAT_DETECTION_SOURCE_IP (16388)
+    Notification DATA: ac69e386514bfd7f1ea2d768ae8dc90d0a20c6bd
+Type Payload: Notify (41) - NAT_DETECTION_DESTINATION_IP
+    Next payload: NONE / No Next Payload  (0)
+    0... .... = Critical Bit: Not Critical
+    Payload length: 28
+    Protocol ID: IKE (1)
+    SPI Size: 0
+    Notify Message Type: NAT_DETECTION_DESTINATION_IP (16389)
+    Notification DATA: 1d87902599a1773c12e606834bf1c1310df3b556
+</code></pre></li>
+<li><p>NAT_DETECTION_SOURCE_IP通知相关联的数据是SPI的SHA-1摘要, IP地址和发送此数据包的端口。可能会有多个NAT_DETECTION_SOURCE_IP消息有效负载。</p></li>
+<li><p>NAT_DETECTION_DESTINATION_IP通知相关联的数据是SPI发送的SHA-1摘要（按照它们出现在标题中的顺序），发送此数据包的IP地址和端口。</p></li>
+<li><p>NAT_DETECTION_SOURCE_IP或NAT_DETECTION_DESTINATION_IP通知的响应者（responder ）可以将提供的值与SPI的SHA-1哈希进行比较。源或接收者ip地址，地址和端口，如果不匹配，那么将启用NAT Traversal。这种情况下NAT_DETECTION_SOURCE_IP散列值与接收到的NAT_DETECTION_SOURCE_IP有效载荷不匹配, 如果不支持NAT穿越，响应者（responder ）可能会拒绝连接 。NAT_DETECTION_DESTINATION_IP散列的情况下, 这意味着接收NAT_DETECTION_DESTINATION_IP有效载荷的系统在NAT后面，该系统应该开始发送如[UDPENCAPS rfc3948]中定义的keepalive数据包; 或者，如果不支持NAT穿越，则可以拒绝连接。</p></li>
+<li><p>IKE启动器（initiator ）必须检查NAT_DETECTION_SOURCE_IP或NAT_DETECTION_DESTINATION_IP有效载荷（如果存在）, 并且如果它们不匹配外部分组中的地址, 必须通过UDP端口4500隧道与该IKE SA相关联的所有将来的IKE和ESP数据包。</p></li>
+<li><p>通过UDP端口4500隧道IKE数据包, IKE头部有四个八位字节零前缀，结果紧随UDP头.  通过UDP端口4500隧道传输ESP数据包, ESP头部紧随UDP头。  由于ESP头的前四个八位字节包含SPI, 并且SPI不能有效地为零，总是可以区分ESP和IKE消息。</p></li>
+<li><p>即使没有检测到NAT，实现也必须处理接收的UDP封装的ESP数据包。</p></li>
+<li><p>在传输模式NAT穿越的情况下，流量选择器必须包含一个IP地址，然后将其用作原始IP地址。 这在RFC 5996 中 第2.23.1节中有更详细的说明。</p></li>
+</ul>
+
+
+
+<h2 id="配置关键配置">配置(关键配置)</h2>
+
+
+
+<h5 id="拓扑图如下">拓扑图如下：</h5>
+
+
+
+<pre class="prettyprint"><code class=" hljs brainfuck"> <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span><span class="hljs-comment">12</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span>          <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span><span class="hljs-comment">23</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">2</span>          <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span><span class="hljs-comment">34</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">3</span>          <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span><span class="hljs-comment">45</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">4</span>          <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>
+ <span class="hljs-comment">|</span>  <span class="hljs-comment">R1</span> <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">F0/0</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span>  <span class="hljs-comment">R2</span> <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">F0/1</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span>  <span class="hljs-comment">R3</span> <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">F0/0</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span>  <span class="hljs-comment">R4</span> <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">F0/1</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span>  <span class="hljs-comment">R5</span> <span class="hljs-comment">|</span>
+ <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>          <span class="hljs-comment">12</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">2</span><span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>          <span class="hljs-comment">23</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">3</span><span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>          <span class="hljs-comment">34</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">4</span><span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>          <span class="hljs-comment">45</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">5</span><span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>
+
+ <span class="hljs-comment">R1:Server</span>
+ <span class="hljs-comment">R2:Gateway</span>
+ <span class="hljs-comment">R3:Internet</span>
+ <span class="hljs-comment">R4:NAT</span> <span class="hljs-comment">Device</span>
+ <span class="hljs-comment">R5:Client</span></code></pre>
+
+<p>由于没能使用IKEv2完成实验，所以如下部分只列举IKEv1 的配置命令。</p>
+
+
+
+<h5 id="r1配置">R1配置:</h5>
+
+<pre><code>!
+interface FastEthernet0/0
+ ip address 12.1.1.1 255.255.255.0
+!
+ip route 0.0.0.0 0.0.0.0 12.1.1.2
+</code></pre>
+
+
+
+<h5 id="r2配置">R2配置:</h5>
+
+<pre><code>!
+interface FastEthernet0/0
+ ip address 12.1.1.2 255.255.255.0
+!         
+interface FastEthernet0/1
+ ip address 23.1.1.2 255.255.255.0
+ crypto map ikev1-map
+!
+crypto isakmp policy 10
+ authentication pre-share
+crypto isakmp key ccie43413 address 34.1.1.4       
+!
+crypto ipsec transform-set ikev1-transform-set esp-des esp-md5-hmac 
+ mode tunnel
+!
+crypto map ikev1-map 10 ipsec-isakmp 
+ set peer 34.1.1.4
+ set transform-set ikev1-transform-set 
+ match address vpn
+!
+ip access-list extended vpn
+ permit ip host 12.1.1.1 host 45.1.1.5
+!
+ip route 0.0.0.0 0.0.0.0 23.1.1.3
+!
+</code></pre>
+
+
+
+<h5 id="r3配置">R3配置:</h5>
+
+<pre><code>!
+interface FastEthernet0/0
+ ip address 34.1.1.3 255.255.255.0
+!
+interface FastEthernet0/1
+ ip address 23.1.1.3 255.255.255.0
+!
+</code></pre>
+
+
+
+<h5 id="r4配置">R4配置:</h5>
+
+<pre><code>!
+interface FastEthernet0/0
+ no switchport
+ ip address 34.1.1.4 255.255.255.0
+ ip nat outside
+!
+interface FastEthernet0/1
+ no switchport
+ ip address 45.1.1.4 255.255.255.0
+ ip nat inside
+!
+ip nat inside source list 1 interface FastEthernet0/0 overload
+ip nat inside source static udp 1.1.1.1 4500 interface FastEthernet0/0 4500
+ip nat inside source static udp 1.1.1.1 500 interface FastEthernet0/0 500
+!
+access-list 1 permit 45.1.1.0 0.0.0.255
+!
+ip route 0.0.0.0 0.0.0.0 34.1.1.3
+!
+</code></pre>
+
+
+
+<h5 id="r5配置">R5配置:</h5>
+
+<pre><code>!
+crypto isakmp policy 10
+ authentication pre-share
+crypto isakmp key ccie43413 address 23.1.1.2       
+!
+crypto ipsec transform-set ikev1-transform-set esp-des esp-md5-hmac 
+ mode tunnel
+!
+crypto map ikev1-map 10 ipsec-isakmp 
+ set peer 23.1.1.2
+ set transform-set ikev1-transform-set 
+ match address vpn
+!
+ip access-list extended vpn
+ permit ip host 45.1.1.5 host 12.1.1.1
+!
+interface FastEthernet0/1
+ ip address 45.1.1.5 255.255.255.0
+ crypto map ikev1-map
+!
+ip route 0.0.0.0 0.0.0.0 45.1.1.4
+!
+</code></pre>
+
+
+
+<h2 id="附录">附录</h2>
+
+<pre><code>Frame 12: 174 bytes on wire (1392 bits), 174 bytes captured (1392 bits) on interface 0
+Ethernet II, Src: ca:08:15:0c:00:06 (ca:08:15:0c:00:06), Dst: ca:07:1f:8c:00:06 (ca:07:1f:8c:00:06)
+Internet Protocol Version 4, Src: 34.1.1.4, Dst: 23.1.1.2
+User Datagram Protocol, Src Port: 1025, Dst Port: 4500
+    Source Port: 1025
+    Destination Port: 4500
+    Length: 140
+    [Checksum: [missing]]
+    [Checksum Status: Not present]
+    [Stream index: 1]
+UDP Encapsulation of IPsec Packets
+Encapsulating Security Payload
+    ESP SPI: 0x7fd1fc5d (2144468061)
+    ESP Sequence: 2
+</code></pre>
+
+<p><a href="https://drive.google.com/file/d/0B93yYDHcYIgCcFlDdFlHRkl4MW8/view?usp=sharing">NAT-T Capturing packets</a> </p>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<div class="footnotes"><hr><ol><li id="fn:2"><a href="https://tools.ietf.org/html/rfc5996#section-2.23">RFC5996 2.23.  NAT Traversal</a> <a href="#fnref:2" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:1"><a href="http://www.cisco.com/en/US/docs/ios-xml/ios/sec_conn_dplane/configuration/15-2mt/sec-ipsec-nat-transp.html">IPsec NAT Transparency</a> <a href="#fnref:1" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:3"><a href="http://www.tcpipguide.com/free/t_TCPChecksumCalculationandtheTCPPseudoHeader-2.htm">TCP Checksum Calculation and the TCP “Pseudo Header”</a>  <a href="#fnref:3" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:4"><a href="http://www.tcpipguide.com/free/t_IPNATCompatibilityIssuesandSpecialHandlingRequirem.htm">IP NAT Compatibility Issues and Special Handling Requirements</a> <a href="#fnref:4" title="Return to article" class="reversefootnote">↩</a></li></ol></div></div></body>
+</html>

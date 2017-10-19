@@ -1,0 +1,121 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+<title>IKEv1与IKEv2对比 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ikev1与ikev2对比"> IKEv1与IKEv2对比</h1>
+
+<table>
+<thead>
+<tr>
+  <th align="left">Table</th>
+  <th align="left">IKEv1</th>
+  <th align="left">IKEv2</th>
+  <th align="left">注释</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td align="left">SA</td>
+  <td align="left">IPsec SA</td>
+  <td align="left">Child SA</td>
+  <td align="left">RFC6071<a href="#fn:1" id="fnref:1" title="See footnote" class="footnote">1</a></td>
+</tr>
+<tr>
+  <td align="left">Exchange modes</td>
+  <td align="left">Main mode: 9 messages<br>Aggressive mode: 6 messages</td>
+  <td align="left">Only 4 messages.</td>
+  <td align="left">RFC2409<a href="#fn:2" id="fnref:2" title="See footnote" class="footnote">2</a><br></td>
+</tr>
+<tr>
+  <td align="left">身份验证方法</td>
+  <td align="left">Pre-Shared Key (PSK)<a href="#fn:3" id="fnref:3" title="See footnote" class="footnote">3</a><br>Digital Signature (RSA-Sig)<a href="#fn:4" id="fnref:4" title="See footnote" class="footnote">4</a><br>Public Key Encryption<a href="#fn:5" id="fnref:5" title="See footnote" class="footnote">5</a><br>Revised Mode of Public key Encryption<a href="#fn:6" id="fnref:6" title="See footnote" class="footnote">6</a></td>
+  <td align="left">Pre-Shared Key (PSK)<a href="#fn:7" id="fnref:7" title="See footnote" class="footnote">7</a><br>Digital Signature (RSA-Sig)<a href="#fn:8" id="fnref:8" title="See footnote" class="footnote">8</a></td>
+  <td align="left">RFC2049<br>RFC6738<br>RFC7427</td>
+</tr>
+<tr>
+  <td align="left">身份验证方法</td>
+  <td align="left">两端认证必须配置相同</td>
+  <td align="left">两端认证配置可以不同</td>
+  <td align="left">RFC6071<a href="#fn:9" id="fnref:9" title="See footnote" class="footnote">9</a></td>
+</tr>
+<tr>
+  <td align="left">流量选择器<br>（Traffic selector）</td>
+  <td align="left">每个IPsec SA仅允许源IP范围，目标IP范围，源端口和目标端口的组合。<br>需要在对等体之间精确地匹配流量选择器。</td>
+  <td align="left">多个组合，每个子SA允许源IP范围，目标IP范围，<br>源端口范围和目标端口范围。</td>
+  <td align="left">RFC5996<a href="#fn:10" id="fnref:10" title="See footnote" class="footnote">10</a></td>
+</tr>
+<tr>
+  <td align="left">SA老化</td>
+  <td align="left">需要对等体支持</td>
+  <td align="left">没有协商，每个对等体可以通过交换DELETE有效载荷随时删除SA。</td>
+  <td align="left">RFC5996<a href="#fn:11" id="fnref:11" title="See footnote" class="footnote">11</a></td>
+</tr>
+<tr>
+  <td align="left">多主机</td>
+  <td align="left">不支持</td>
+  <td align="left">通过在单个IP地址和端口对上使用多个ID来支持</td>
+  <td align="left">RFC4555<a href="#fn:12" id="fnref:12" title="See footnote" class="footnote">12</a></td>
+</tr>
+<tr>
+  <td align="left">密钥</td>
+  <td align="left">没有定义</td>
+  <td align="left">定义</td>
+  <td align="left">RFC5996<a href="#fn:13" id="fnref:13" title="See footnote" class="footnote">13</a></td>
+</tr>
+<tr>
+  <td align="left">NAT穿越</td>
+  <td align="left">需要在扩展中进行支持</td>
+  <td align="left">默认即支持</td>
+  <td align="left">RFC5996<a href="#fn:14" id="fnref:14" title="See footnote" class="footnote">14</a></td>
+</tr>
+<tr>
+  <td align="left">远程接入VPN</td>
+  <td align="left">不支持，需要特定厂商进行支持例如Cisco的Extended Authentication (XAUTH)</td>
+  <td align="left">默认支持:<br>Extensible Authentication Protocol (EAP)<br>通过EAP的用户认证与IKE的认证进行关联配置Configuration payload (CP)</td>
+  <td align="left">RFC5106<a href="#fn:15" id="fnref:15" title="See footnote" class="footnote">15</a></td>
+</tr>
+<tr>
+  <td align="left">DoS防护</td>
+  <td align="left">不支持</td>
+  <td align="left">支持Anti-replay，’Cookies’支持缓解洪泛攻击（flooding attacks），修复IKEv1漏洞</td>
+  <td align="left">RFC6311<a href="#fn:16" id="fnref:16" title="See footnote" class="footnote">16</a></td>
+</tr>
+<tr>
+  <td align="left">传输可靠性</td>
+  <td align="left">相对可靠性低</td>
+  <td align="left">消息以请求-回复的方式交互<br>定义了删除SA的操作<br>定义了消息重传</td>
+  <td align="left">RFC4306 <a href="#fn:17" id="fnref:17" title="See footnote" class="footnote">17</a></td>
+</tr>
+<tr>
+  <td align="left">扩展性</td>
+  <td align="left">扩展性弱</td>
+  <td align="left">IKEv2的重定向机制（RFC5685）<br>IKEv2会话恢复（RFC5723）<br>协议支持IKEv2 / IPsec的高可用性（RFC6311）<br>IKEv2中的仅EAP认证的扩展（RFC5998）<br>一个快速故障检测方法Internet密钥交换协议（IKE）（RFC6290）</td>
+  <td align="left">-</td>
+</tr>
+</tbody></table>
+
+
+
+
+<h1 id="参考文献">参考文献</h1>
+
+<div class="footnotes"><hr><ol><li id="fn:1">RFC6071: It is called the IPsec SA in IKEv1 and, in the IKEv2 RFCs, it is referred to variously as a CHILD_SA, a child SA, and an IPsec SA.  This document uses the term “IPsec SA”.  To further complicate the terminology, since IKEv1 consists of two sequential negotiations, called phases, the IKE SA is also referred to as a Phase 1 SA and the IPsec SA is referred to as a Phase 2 SA. <a href="#fnref:1" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:2">RFC2409: 7 Payload Explosion of Complete Exchange <a href="#fnref:2" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:3">RFC2409: 5.4 Authentication with a Pre-Shared Key <a href="#fnref:3" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:4">RFC2409: 5.1 Authentication with Digital Signatures <a href="#fnref:4" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:5">RFC2409: 5.2 Authentication with Public Key Encryption <a href="#fnref:5" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:6">RFC2409: 5.3 A Revised method of Authentication with Public Key Encryption <a href="#fnref:6" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:7">RFC6738 <a href="#fnref:7" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:8">RFC7427 <a href="#fnref:8" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:9">RFC6071: 2.3.1 Differences between IKEv1 and IKEv2 <a href="#fnref:9" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:10">RFC5996: 2.9. Traffic Selector Negotiation <a href="#fnref:10" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:11">RFC5996: 2.8. Rekeying <a href="#fnref:11" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:12">RFC4555 <a href="#fnref:12" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:13">RFC5996: 2.8. Rekeying <a href="#fnref:13" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:14">RFC5996: 2.23. NAT Traversal <a href="#fnref:14" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:15">RFC5106:  <a href="#fnref:15" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:16">RFC6311:  4. The IKEv2/IPsec SA Counter Synchronization Problem <a href="#fnref:16" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:17">RFC4306: 2.1. Use of Retransmission Timers <a href="#fnref:17" title="Return to article" class="reversefootnote">↩</a></li></ol></div></div></body>
+</html>

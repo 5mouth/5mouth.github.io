@@ -1,0 +1,351 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+<title>IPSec IKEv2 High Availability - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ipsec-vpn-high-availability">IPSec VPN High Availability</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#ipsec-vpn-high-availability">IPSec VPN High Availability</a><ul>
+<li><a href="#介绍">介绍</a><ul>
+<li><a href="#hsrphot-standby-router-protocol">HSRP(Hot Standby Router Protocol)</a></li>
+<li><a href="#ssostateful-switchover">SSO(Stateful Switchover)</a></li>
+<li><a href="#ikev2-load-balancer">IKEv2 Load Balancer</a></li>
+</ul>
+</li>
+<li><a href="#配置">配置</a><ul>
+<li><a href="#拓扑">拓扑</a></li>
+<li><a href="#r1配置">R1配置:</a></li>
+<li><a href="#r3配置">R3配置:</a></li>
+<li><a href="#r4配置">R4配置:</a></li>
+<li><a href="#r6配置">R6配置:</a></li>
+<li><a href="#r7配置">R7配置:</a></li>
+</ul>
+</li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<p>接下来要说的是IPSec VPN的高可用性，在之前介绍IPSec VPN的时候通常都是以Site-to-Site的方式进行介绍的，但是这样的网络就存在单点故障的隐患。所以高可用性讨论的就是如何进行冗余、备份，负载分担，使得IPSec VPN能进行不间断的工作。</p>
+
+
+
+<h3 id="hsrphot-standby-router-protocol">HSRP(Hot Standby Router Protocol)</h3>
+
+<p>HSRP是一种网关备份技术，如下图所示：</p>
+
+<pre><code>IOS：c7200p-adventerprisek9-mz.152-4.M7，c7200p-adventerprisek9-mz.151-4.M9
+GNS3 Version：1.3.13
+                1.3.4.3/24+----+3.4.6.3/24                                                  
+                ----------| R3 |-----------                                                 
+                |     F0/0+----+F1/0      |                                                 
+                |           |             |                                                 
+                |                         |                                                 
++----+1.3.4.1/24|           |           /---\    3.4.6.6/24+----+.6   67.1.1.0/24   .7+----+
+| R1 |----------+          HSRP         |ISP|--------------| R6 |---------------------| R7 |
++----+F0/0      |           |           \---/          F1/0+----+F0/0             F0/0+----+
+                |                         |                                                 
+                |           |             |                                                 
+                |     F0/0+----+F1/0      |                                                 
+                ----------| R4 |-----------                                                 
+                1.3.4.4/24+----+3.4.6.4/24      
+</code></pre>
+
+<p>R3和R4配置HSRP，产生虚地址（virtual IP address）1.3.4.100和3.4.6.100，只有active route ，才有使用虚拟地址的权利。同理当R3和R4配置HSRP之后，对外（R6）来说，只认为存在一个设备（3.4.6.100），当R3或R4挂掉的时候，HSRP发生角色切换，standby  route声称成为active route，继续使用虚地址3.4.6.100进行IPSec VPN建立进行数据包转发。有关HSRP的更多信息请参见这里<a href="#fn:1" id="fnref:1" title="See footnote" class="footnote">1</a>。</p>
+
+<p><strong>缺点：</strong> <br>
+1.HSRP本身需要消耗收敛时间，不利于无间断转发； <br>
+2.在standby  route上并没有保存完整的IKE状态信息，所以一旦发生切换需要重新建立IPSec VPN增加收敛时间 <br>
+3.在公网IP上，出口通常都是不同的ISP，那么需要保证出口IP都是在同一个网段增加部署的成本。 <br>
+4.当active route发生故障的时候，R6并不能感知到，如果R1不发送业务数据，触发standby  route发送IKE协商消息，那么R7发往R1加密数据将持续丢弃，因为R4上并没有IKE状态信息。</p>
+
+
+
+<h3 id="ssostateful-switchover">SSO(Stateful Switchover)</h3>
+
+<p>前面说到因为standby  route没有IKE状态信息，所以发生切换之后，standby  route还需要重新创建IKE，造成业务流量的中断。所以SSO就是用来同步IKE状态信息的。</p>
+
+<blockquote>
+  <p>SSO allows the active and standby routers to share IKE and IPsec state information so both routers have enough information to become the active router at any time. </p>
+</blockquote>
+
+<p><strong>缺点：</strong> <br>
+1.SSO仅备份IPSecVPN的状态，不对流量切换做操作，所以需要配合HSRP共同使用 <br>
+2.SSO并不能做到流量负载分担，降低了链路带宽使用效率 <br>
+3.增加部署难度协议复杂性。</p>
+
+<p>有关SSO的更多信息请参见<a href="#fn:2" id="fnref:2" title="See footnote" class="footnote">2</a>。</p>
+
+
+
+<h3 id="ikev2-load-balancer">IKEv2 Load Balancer</h3>
+
+<p>IKEv2 Load Balancer很好的解决了状态冗余和流量分担两种问题，但是由于使用GNS3模拟器的原因，并没有完成这个实验。后面了解到一种通过FlexVPN 来完成IKEv2 负载分担的方法，笔者还处于学习阶段，理解透彻之后再进行分享，了解更多请参见<a href="#fn:3" id="fnref:3" title="See footnote" class="footnote">3</a>。</p>
+
+
+
+<h2 id="配置">配置</h2>
+
+<p><strong>配置部分，这里仅介绍IKEv2 在HSRP下的配置。</strong></p>
+
+
+
+<h3 id="拓扑">拓扑</h3>
+
+<pre><code>                1.3.4.3/24+----+3.4.6.3/24                                                  
+                ----------| R3 |-------------                                               
+                |     F0/0+----+F0/1        |                                               
+                |           |               |                                               
+                |                           |                                               
++----+1.3.4.1/24|           |             /---\  3.4.6.6/24+----+.6   67.1.1.0/24   .7+----+
+| R1 |----------+ inside&lt;--HSRP--&gt;outside |ISP|------------| R6 |---------------------| R7 |
++----+F0/0      |           |             \---/        F0/1+----+F0/0             F0/0+----+
+                |                           |                                               
+                |           |               |                                               
+                |     F0/0+----+F0/1        |                                               
+                ----------| R4 |-------------                                               
+                1.3.4.4/24+----+3.4.6.4/24                         
+R1:PC
+R3:VPN-Active-Gateway（HSRP）
+R4:VPN-Standby-Gateway（HSRP）
+R6:VPN-Site
+R7:PC                         
+</code></pre>
+
+
+
+<h3 id="r1配置">R1配置:</h3>
+
+<pre><code>!
+interface FastEthernet0/0
+ ip address 1.3.4.1 255.255.255.0
+!
+ip route 0.0.0.0 0.0.0.0 1.3.4.100
+!
+</code></pre>
+
+
+
+<h3 id="r3配置">R3配置:</h3>
+
+<pre><code>crypto ikev2 proposal ikev2-proposal 
+ encryption aes-cbc-256
+ integrity sha512
+ group 16
+!
+crypto ikev2 policy ikev2-policy 
+ match fvrf any
+ proposal ikev2-proposal
+!
+crypto ikev2 keyring ikev2-keyring
+ peer ccie43413
+  address 3.4.6.6
+  pre-shared-key local ccie43413
+  pre-shared-key remote ccie43413
+ !
+!
+crypto ikev2 profile ikev2-profile
+ match identity remote address 3.4.6.6 255.255.255.255 
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local ikev2-keyring
+!
+crypto ipsec transform-set ikev2-transform-set esp-aes esp-sha-hmac 
+ mode tunnel
+!
+crypto map ikev2-map 10 ipsec-isakmp 
+ set peer 3.4.6.6
+ set transform-set ikev2-transform-set 
+ set ikev2-profile ikev2-profile
+ match address vpn
+!
+ip access-list extended vpn
+ permit ip host 1.3.4.1 host 67.1.1.7
+!
+interface FastEthernet0/0
+ ip address 1.3.4.3 255.255.255.0
+ standby delay reload 120
+ standby 2 ip 1.3.4.100
+ standby 2 preempt
+ standby 2 name HA-inside
+ standby 2 track 2 decrement 10
+!
+interface FastEthernet0/1
+ ip address 3.4.6.3 255.255.255.0
+ standby delay reload 120
+ standby 1 ip 3.4.6.100
+ standby 1 preempt
+ standby 1 name HSRP-outside
+ standby 1 track 1 decrement 10
+ crypto map ikev2-map redundancy HSRP-outside stateful
+!
+ip route 67.1.1.0 255.255.255.0 3.4.6.6
+!
+track 1 interface FastEthernet0/0 line-protocol
+!
+track 2 interface FastEthernet0/1 line-protocol
+!
+</code></pre>
+
+
+
+<h3 id="r4配置">R4配置:</h3>
+
+<pre><code>!
+crypto ikev2 proposal ikev2-proposal 
+ encryption aes-cbc-256
+ integrity sha512
+ group 16
+!
+crypto ikev2 policy ikev2-policy 
+ match fvrf any
+ proposal ikev2-proposal
+!
+crypto ikev2 keyring ikev2-keyring
+ peer ccie43413
+  address 3.4.6.6
+  pre-shared-key local ccie43413
+  pre-shared-key remote ccie43413
+ !
+!
+crypto ikev2 profile ikev2-profile
+ match identity remote address 3.4.6.6 255.255.255.255 
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local ikev2-keyring
+!
+crypto ipsec transform-set ikev2-transform-set esp-aes esp-sha-hmac 
+ mode tunnel
+!
+crypto map ikev2-map 10 ipsec-isakmp 
+ set peer 3.4.6.6
+ set transform-set ikev2-transform-set 
+ set ikev2-profile ikev2-profile
+ match address vpn
+!
+ip access-list extended vpn
+ permit ip host 1.3.4.1 host 67.1.1.7
+!
+!
+interface FastEthernet0/0
+ ip address 1.3.4.4 255.255.255.0
+ standby delay reload 120
+ standby 2 ip 1.3.4.100
+ standby 2 preempt
+ standby 2 name HA-inside
+ standby 2 track 2 decrement 10
+!
+interface FastEthernet0/1
+ ip address 3.4.6.4 255.255.255.0
+ standby delay reload 120
+ standby 1 ip 3.4.6.100
+ standby 1 preempt
+ standby 1 name HSRP-outside
+ standby 1 track 1 decrement 10
+ crypto map ikev2-map redundancy HSRP-outside stateful
+!
+track 1 interface FastEthernet0/0 line-protocol
+!
+track 2 interface FastEthernet0/1 line-protocol
+!
+ip route 67.1.1.0 255.255.255.0 3.4.6.6         
+!
+</code></pre>
+
+
+
+<h3 id="r6配置">R6配置:</h3>
+
+<pre><code>!
+crypto ikev2 proposal ikev2-proposal 
+ encryption aes-cbc-256
+ integrity sha512
+ group 16
+!
+crypto ikev2 policy ikev2-policy 
+ match fvrf any
+ proposal ikev2-proposal
+!
+crypto ikev2 keyring ikev2-keyring
+ peer ccie43413
+  address 3.4.6.100
+  pre-shared-key local ccie43413
+  pre-shared-key remote ccie43413
+ !
+!
+crypto ikev2 profile ikev2-profile
+ match identity remote address 3.4.6.100 255.255.255.255 
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local ikev2-keyring
+!
+crypto ipsec transform-set ikev2-transform-set esp-aes esp-sha-hmac 
+ mode tunnel
+!
+crypto map ikev2-map 10 ipsec-isakmp 
+ set peer 3.4.6.100
+ set transform-set ikev2-transform-set 
+ set ikev2-profile ikev2-profile
+ match address vpn
+!
+ip access-list extended vpn
+ permit ip host 67.1.1.7 host 1.3.4.1
+!
+interface FastEthernet0/0
+ ip address 67.1.1.6 255.255.255.0
+!
+interface FastEthernet0/1
+ ip address 3.4.6.6 255.255.255.0
+ crypto map ikev2-map
+!
+ip route 1.3.4.0 255.255.255.0 3.4.6.100
+!
+</code></pre>
+
+
+
+<h3 id="r7配置">R7配置:</h3>
+
+<pre><code>!
+interface FastEthernet0/0
+ ip address 67.1.1.7 255.255.255.0
+!
+ip route 0.0.0.0 0.0.0.0 67.1.1.6
+!
+</code></pre>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<div class="footnotes"><hr><ol><li id="fn:1"><a href="http://www.cisco.com/c/en/us/td/docs/switches/lan/catalyst3560/software/release/12-2_52_se/configuration/guide/3560scg/swhsrp.html">Configuring HSRP</a> <br>
+<a href="http://www.cisco.com/c/en/us/support/docs/ip/hot-standby-router-protocol-hsrp/9234-hsrpguidetoc.html">Hot Standby Router Protocol Features and Functionality</a> <a href="#fnref:1" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:2"><a href="http://www.cisco.com/c/en/us/td/docs/ios-xml/ios/sec_conn_vpnav/configuration/15-mt/sec-vpn-availability-15-mt-book/sec-state-fail-ipsec.html#GUID-BB022A4E-69B7-4F62-85E4-DE2E48B3CBE9">VPN Availability Configuration Guide, Cisco IOS Release 15M&amp;T</a> <br>
+ <a href="http://www.cisco.com/c/en/us/td/docs/ios/12_0s/feature/guide/sso120s.html">Stateful Switchover</a> <a href="#fnref:2" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:3"><a href="http://www.cisco.com/en/US/docs/ios-xml/ios/sec_conn_ike2vpn/configuration/15-2mt/sec-cfg-clb-supp.html">Configuring IKEv2 Load Balancer</a> <br>
+<a href="https://router898.wordpress.com/2016/08/02/ikev2-load-balancer-1/">IKEv2 Load Balancer #1</a> <br>
+<a href="https://router898.wordpress.com/2016/08/30/ikev2-load-balancer-2/">IKEv2 Load Balancer #2</a>   <a href="#fnref:3" title="Return to article" class="reversefootnote">↩</a></li></ol></div></div></body>
+</html>

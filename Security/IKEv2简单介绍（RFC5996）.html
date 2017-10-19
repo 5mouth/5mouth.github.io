@@ -1,0 +1,310 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IKEv2简单介绍（RFC5996）</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ikev2简单介绍rfc5996">IKEv2简单介绍（RFC5996）</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#ikev2简单介绍rfc5996">IKEv2简单介绍（RFC5996）</a><ul>
+<li><a href="#介绍">介绍</a></li>
+<li><a href="#ike-header">IKE Header</a></li>
+<li><a href="#generic-payload-header">Generic Payload Header</a></li>
+<li><a href="#security-association-payload">Security Association Payload</a></li>
+<li><a href="#ikev2特性">IKEv2特性</a><ul>
+<li><a href="#请求和响应request-and-response">请求和响应（Request and Response）</a></li>
+<li><a href="#message-id">Message ID</a></li>
+<li><a href="#重复请求窗口大小window-size-for-overlapping-requests">重复请求窗口大小（Window Size for Overlapping Requests）</a></li>
+<li><a href="#状态同步和连接超时">状态同步和连接超时</a></li>
+<li><a href="#ike-sa-spis-and-cookies">IKE SA SPIs and Cookies</a></li>
+<li><a href="#加密算法协商">加密算法协商</a></li>
+<li><a href="#密钥">密钥</a></li>
+</ul>
+</li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+<h2 id="介绍">介绍</h2>
+
+<p>大多数内容来自于RFC 5996，仅供参考，如有错误请指正，谢谢。lvpin.mail@gmail.com 。</p>
+
+<h2 id="ike-header">IKE Header</h2>
+
+<pre><code>                     1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                       IKE SA Initiator's SPI                  |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                       IKE SA Responder's SPI                  |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|  Next Payload | MjVer | MnVer | Exchange Type |     Flags     |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                          Message ID                           |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                            Length                             |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</code></pre>
+
+<p>· <strong>IKE SA Initiator’s SPI:</strong>由发起者配置的值标识唯一的IKE安全关联，此值不能 为零。 <br>
+· <strong>IKE SA Responder’s SPI:</strong>响应者选择的值标识唯一的IKE安全关联。在首次进行交换的过程中此值为0。 <br>
+· <strong>Next Payload:</strong>指示有效载荷的类型每个的格式和值 有效载荷定义如下。</p>
+
+<pre><code>  Next Payload Type                Notation  Value
+  ---------------------------------------------
+  No Next Payload                             0
+  Security Association             SA         33
+  Key Exchange                     KE         34
+  Identification - Initiator       IDi        35
+  Identification - Responder       IDr        36
+  Certificate                      CERT       37
+  Certificate Request              CERTREQ    38
+  Authentication                   AUTH       39
+  Nonce                            Ni, Nr     40
+  Notify                           N          41
+  Delete                           D          42
+  Vendor ID                        V          43
+  Traffic Selector - Initiator     TSi        44
+  Traffic Selector - Responder     TSr        45
+  Encrypted and Authenticated      SK         46
+  Configuration                    CP         47
+  Extensible Authentication        EAP        48
+</code></pre>
+
+<p>· <strong>Major Version:</strong>显示IKE的主要版本。 <br>
+· <strong>Minor Version:</strong>显示ike的次要版本。 <br>
+· <strong>Exchange Type:</strong>显示交换报文的类型</p>
+
+<pre><code>  Exchange Type             Value
+  ----------------------------------
+  IKE_SA_INIT               34
+  IKE_AUTH                  35
+  CREATE_CHILD_SA           36
+  INFORMATIONAL             37
+</code></pre>
+
+<p>· <strong>Flags:</strong>表示特定选项信息。</p>
+
+<pre><code>    +-+-+-+-+-+-+-+-+
+    |X|X|R|V|I|X|X|X|
+    +-+-+-+-+-+-+-+-+
+</code></pre>
+
+<p>··· <strong>R bit:</strong>表示是一个响应者。 <br>
+··· <strong>V bit:</strong>发起方能够提供一个更高的IKE版本，在IKEv2中发送者此位不置位，接受者忽略此位。 <br>
+··· <strong>I bit:</strong>表示是一个发起者。 </p>
+
+<p>· <strong>Message ID:</strong>用于实现IKEv2中请求、响应、重传操作。 <br>
+· <strong>Length:</strong>消息总长度(header + payloads)。</p>
+
+
+
+<h2 id="generic-payload-header">Generic Payload Header</h2>
+
+<pre><code>                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ | Next Payload  |C|  RESERVED   |         Payload Length        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</code></pre>
+
+<p>· <strong>Next Payload:</strong>消息中下一个有效载荷的有效载荷类型的标识符,如果当前有效载荷是消息中的最后一个，则该字段将为0.该字段提供“链接”能力，从而可以通过将每个附加到消息的末尾并将“下一个”有效载荷“字段以指示新有效载荷的类型。(类似于IPv6中的Next header）</p>
+
+<pre><code>  Next Payload Type                Notation  Value
+  --------------------------------------------------
+  No Next Payload                             0
+  Security Association             SA         33
+  Key Exchange                     KE         34
+  Identification - Initiator       IDi        35
+  Identification - Responder       IDr        36
+  Certificate                      CERT       37
+  Certificate Request              CERTREQ    38
+  Authentication                   AUTH       39
+  Nonce                            Ni, Nr     40
+  Notify                           N          41
+  Delete                           D          42
+  Vendor ID                        V          43
+  Traffic Selector - Initiator     TSi        44
+  Traffic Selector - Responder     TSr        45
+  Encrypted and Authenticated      SK         46
+  Configuration                    CP         47
+  Extensible Authentication        EAP        48
+</code></pre>
+
+<p>· <strong>Critical:</strong>如果发送方希望接收方在不理解（not understand）有效载荷类型时拒绝整个消息，则必须设置为1。 <br>
+· <strong>RESERVED:</strong>保留位。 <br>
+· <strong>Payload Length:</strong> current payload + generic payload header</p>
+
+<h2 id="security-association-payload">Security Association Payload</h2>
+
+<p>Security Association payload中可以包括多个proposals，必须按照优选到最不优选的方式进行排序，一个Security Association有一个或多个Proposal 组成。每一个Proposal 包括一个或多个Transform ，在每一个Transform 下面包括需要指定的加密属性。</p>
+
+<pre><code>                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ | Next Payload  |C|  RESERVED   |         Payload Length        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                                                               |
+ ~                          &lt;Proposals&gt;                          ~
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</code></pre>
+
+<p>Payload内容与之前一致，不再赘述。 <br>
+例如当有多个Proposal的时候表格如下</p>
+
+<pre><code> SA Payload
+    |
+    +--- Proposal #1 ( Proto ID = ESP(3), SPI size = 4,
+    |     |            7 transforms,      SPI = 0x052357bb )
+    |     |
+    |     +-- Transform ENCR ( Name = ENCR_AES_CBC )
+    |     |     +-- Attribute ( Key Length = 128 )
+    |     |
+    |     +-- Transform ENCR ( Name = ENCR_AES_CBC )
+    |     |     +-- Attribute ( Key Length = 192 )
+    |     |
+    |     +-- Transform ENCR ( Name = ENCR_AES_CBC )
+    |     |     +-- Attribute ( Key Length = 256 )
+    |     |
+    |     +-- Transform INTEG ( Name = AUTH_HMAC_SHA1_96 )
+    |     +-- Transform INTEG ( Name = AUTH_AES_XCBC_96 )
+    |     +-- Transform ESN ( Name = ESNs )
+    |     +-- Transform ESN ( Name = No ESNs )
+    |
+    +--- Proposal #2 ( Proto ID = ESP(3), SPI size = 4,
+          |            4 transforms,      SPI = 0x35a1d6f2 )
+          |
+          +-- Transform ENCR ( Name = AES-GCM with a 8 octet ICV )
+          |     +-- Attribute ( Key Length = 128 )
+          |
+          +-- Transform ENCR ( Name = AES-GCM with a 8 octet ICV )
+          |     +-- Attribute ( Key Length = 256 )
+          |
+          +-- Transform ESN ( Name = ESNs )
+          +-- Transform ESN ( Name = No ESNs )
+</code></pre>
+
+
+
+<h2 id="ikev2特性">IKEv2特性</h2>
+
+<h3 id="请求和响应request-and-response">请求和响应（Request and Response）</h3>
+
+<p>IKE中的所有消息都是成对的存在，分为请求和响应，并且对于安全关联来说，一端是发起者，一端是响应者。对于每个IKE消息，发起者负责在超时的情况下重传，响应者不允许重传响应消息。除非响应者接收到了重传的请求。发起者必须记录每个请求，直到收到了相应的响应信息。响应者必须记录每个响应直到它接收到正确的序列号的请求。为了节省内存，响应者允许设置超时时间，在超时时间之外收到了请求那么必须忽略请求，而不是尝试重新建立。IKE是一种可靠的协议，发起者必须重传请求，直到请求被确认，如果响应者认为IKE SA失败，这种情况下，  <br>
+应当重置所有的状态与IKE SA协商的 子SA相关联。</p>
+
+
+
+<h3 id="message-id">Message ID</h3>
+
+<p>每个 IKE消息包含 Message ID，作为固定报头中的一部分。Message ID消息用于匹配请求和响应，重传的消息必须使用与原始消息相同的 Message ID，Message ID是 32 bit数，每进行一次消息传递的时候Message ID 加 1，当Message ID消息太大以至于不能容纳32 bit的时候 IKE SA必须关闭或重新申请密钥，如果重置IKE SA那么Message ID将置0。Message ID受加密保护，可以防止重放攻击。</p>
+
+
+
+<h3 id="重复请求窗口大小window-size-for-overlapping-requests">重复请求窗口大小（Window Size for Overlapping Requests）</h3>
+
+<p>SET_WINDOW_SIZE通知允许接受者在获得第一个响应之前发送多个请求。在IKE SA建立之后，为了最大化IKE吞吐量，IKE端点可以在获得任何响应之前发出多个请求，直到达到由其对等体的SET_WINDOW_SIZE设置的限制。 可以接受和处理多个请求。IKE端点不得超过对等体对于所发送的IKE请求的所述窗口大小。IKE端点必须保持等于其声明的窗口大小的先前响应的消息（已确保这些消息丢弃的时候可以被重传），以防其响应报文丢失。新的IKE SA以窗口大小1开始，直到通过发送新的SET_WINDOW_SIZE通知来显式增加。当接收到支持的窗口之外的IKE消息ID时，发送INVALID_MESSAGE_ID通知。此通知消息不得在响应中发送。</p>
+
+
+
+<h3 id="状态同步和连接超时">状态同步和连接超时</h3>
+
+<p>一个IKE端点允许删除所有与之相关的IKE SA，并随时与相应的子SA关联其状态。这是在端点本框和重启情况下的预期行为，保证了当端点发生故障的时候重新初始化其状态，以保证接受到不必要的流量丢入到黑洞中，而不必浪费网络的带宽。INITIAL_CONTACT通知是在认证身份之间当前活动的唯一IKE SA。它可以在崩溃后建立IKE SA时发送，并且接受者可以使用此信息删除其具有的相同的IKE SA，而无需等待超时。INITIAL_CONTACT通知，如果发送，必须在第一个IKE_AUTH请求或响应，接收方可以在其他消息中忽略它。</p>
+
+
+
+<h3 id="ike-sa-spis-and-cookies">IKE SA SPIs and Cookies</h3>
+
+<p>头部中的最初两个八字节字段（称为“IKE SPI”“Initiator SPI、Responder SPI”）用作IKE分组开始处的连接标识符。 IKE SPI是IKE SA的唯一标识符。 SPI值为零是特殊的：它表示Remote SPI值尚未被发送方知道。传入进来的数据包通过SPI值去匹配到相应的IKE SA。在初始IKE交换的第一个消息中，发起方不知道响应方的SPI值，因此将该字段设置为零。 如果响应者发送非零响应者SPI（non-zero responder SPI），则发起者不应以此原因拒绝响应。</p>
+
+<p>IKE_SA_INIT是对等体建立安全信道的初始交换。在完成初始交换之后，所有进一步的交换被加密。交换仅包含两个分组这样会消耗比较多的硬件资源，正是因为这样的缺点容易遭受DOS攻击。为了防止这种攻击，IKEv2在IKE_SA_INIT中有一个可选交换，如果到达攻击阈值，响应者不继续处理这些交换分组，而是使用cookie发给发送者，如果需要建立会话，那么发送者必须重新发送IKE_SA_INIT数据包，并附上收到了cookie。一个好的方法是将响应者cookie设置为：</p>
+
+<p>Cookie =  | Hash(Ni | IPi | SPIi | ) <br>
+其中是随机生成的密钥，仅对应答者知道并且周期性地改变。  <br>
+应在每次重新生成时更改。</p>
+
+<p>如下就是 Here is a diagram of IKE_SA_INIT exchange with cookie challenge:</p>
+
+<pre><code> Initiator                         Responder
+ -----------------------------------------------------------
+ HDR(A,0), SAi1, KEi, Ni  --&gt;
+                              &lt;--  HDR(A,0), N(COOKIE)
+ HDR(A,0), N(COOKIE), SAi1,
+     KEi, Ni  --&gt;
+                              &lt;--  HDR(A,B), SAr1, KEr,
+                                       Nr, [CERTREQ]
+ HDR(A,B), SK {IDi, [CERT,]
+     [CERTREQ,] [IDr,] AUTH,
+     SAi2, TSi, TSr}  --&gt;
+                              &lt;--  HDR(A,B), SK {IDr, [CERT,]
+                                       AUTH, SAr2, TSi, TSr}
+ Notation    Payload
+ -----------------------------------------
+ AUTH        Authentication(认证）
+ CERT        Certificate（证书）
+ CERTREQ     Certificate Request（请求证书）
+ CP          Configuration
+ D           Delete
+ EAP         Extensible Authentication
+ HDR         IKE header (not a payload)
+ IDi         Identification - Initiator（识别 - 发送者）
+ IDr         Identification - Responder（识别 - 响应者）
+ KE          Key Exchange
+ Ni, Nr      Nonce（随机数）
+ N           Notify（通知）
+ SA          Security Association
+ SK          Encrypted and Authenticated
+ TSi         Traffic Selector - Initiator流量选择器 - 发送者
+ TSr         Traffic Selector - Responder流量选择器 - 响应者
+ V           Vendor ID
+</code></pre>
+
+<p>HDR包含安全参数索引（SPI），版本号和各种标志。</p>
+
+<p>SAi1有效载荷指示发起方为IKE SA支持的加密算法</p>
+
+<p>KE有效载荷发送发起者的Diffie-Hellman值。</p>
+
+<p>Ni是启动器的随机数。</p>
+
+<p>The responder chooses a cryptographic suite from the initiator’s <br>
+   offered choices and expresses that choice in the SAr1 payload, <br>
+   completes the Diffie-Hellman exchange with the KEr payload, and sends <br>
+   its nonce in the Nr payload.</p>
+
+
+
+<h3 id="加密算法协商">加密算法协商</h3>
+
+<p>一个Security Association有一个或多个Proposal 组成。每一个Proposal 包括一个或多个Transform ，在每一个Transform 下面包括需要指定的加密属性。响应者依据自己的需求选择对应的Proposal 。如果拒绝那么错误在类型NO_PROPOSAL_CHOSEN的通知中给出。</p>
+
+<h3 id="密钥">密钥</h3>
+
+<p>IKE，ESP和AH的安全关联仅在有限的时间内使用，并保护相关数据，当安全关联到期的时候不得再继续使用此安全关联，如果有继续保护数据的需求，需要重新建立安全关联。重新建立的安全关联将取代过期的安全关联，称之为“密钥更新”。  <br>
+为了实现ipsec 的密钥更新平滑过渡，需要在不重启整个IKE SA的情况下实现密钥更新，如果在密钥更新期间发生失败，那么必须关闭现有的子SA，然后重新开始新的的SA，当新的SA建立完成之后就删除旧的SA。旧的SA不能再继续使用。在旧的SA即将删除之前，必须先建立新的SA，在此之间必须预留足够多的时间，使得新的SA得以建立，以保证业务流量可以切换到新的SA上。</p>
+
+<p>当需要密钥更新的时候，使用现有的CREATE_CHILD_SA，与对端建立新的等效IKE SA（equivalent IKE SA），这样创建的IKE SA会继承所有原始IKE SA 的子SA控制信息。当创建新的IKE SA之后，发起方删除旧的IKE SA ，同时也会向对端发送一个请求，对端收到这个请求之后也会删除旧的IKE SA。  <br>
+IKEv1与IKEv2区别在于IKEv1 SA生存周期协商，但是在IKEv2中SA是每端自行维护，如果两端生存周期不一致，那么较短的生存周期的将先生成新的密钥，如果SA长期不活动，也不存在流量的情况下，可以选择关闭SA，而不是等待SA寿命超时。</p>
+
+<p>需要注意的是：如果两端配置相同的生存期策略，则可能两者将同时发起重新生成密钥（这将导致冗余SA）。 为了减少发生这种情况的可能性，请求密钥请求的定时应当抖动（在注意到需要重新密钥化之后延迟随机时间量）。</p>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li><a href="http://www.cisco.com/c/en/us/support/docs/security-vpn/ipsec-negotiation-ike-protocols/115936-understanding-ikev2-packet-exch-debug.html#topic3">IKEv2 Packet Exchange and Protocol Level Debugging</a> </li>
+<li><a href="https://tools.ietf.org/html/rfc5996">RFC5996</a></li>
+</ol></div></body>
+</html>

@@ -1,0 +1,418 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+
+<title>Cisco IOS设备登录管理 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="cisco-ios设备登录管理">Cisco IOS设备登录管理</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#cisco-ios设备登录管理">Cisco IOS设备登录管理</a><ul>
+<li><a href="#介绍">介绍</a></li>
+<li><a href="#telnet-password管理设备">Telnet Password管理设备</a><ul>
+<li><a href="#配置">配置</a></li>
+</ul>
+</li>
+<li><a href="#telnet-usernamepassword管理设备">Telnet Username+Password管理设备</a><ul>
+<li><a href="#配置-1">配置</a></li>
+</ul>
+</li>
+<li><a href="#telnet-无密码管理设备">Telnet 无密码管理设备</a><ul>
+<li><a href="#配置-2">配置</a></li>
+</ul>
+</li>
+<li><a href="#ssh-管理设备">SSH 管理设备</a><ul>
+<li><a href="#配置-3">配置</a></li>
+</ul>
+</li>
+<li><a href="#依据不同的用户给予不同的命令行权限">依据不同的用户给予不同的命令行权限</a><ul>
+<li><a href="#配置-4">配置</a></li>
+</ul>
+</li>
+<li><a href="#远程登录惩罚特性">远程登录惩罚特性</a></li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<ol>
+<li>Telnet Password管理设备</li>
+<li>Telnet Username+Password管理设备</li>
+<li>Telnet 无密码管理设备</li>
+<li>SSH 管理设备</li>
+<li>依据不同的用户给予不同的命令行权限</li>
+<li>远程登录惩罚特性</li>
+</ol>
+
+
+
+<h2 id="telnet-password管理设备">Telnet Password管理设备</h2>
+
+<p>首先需要关注的是，其实IOS设备默认就已经开放了23端口，只是因为设备默认没有配置vty密码所以无法登陆上去，为什么这么说呢？ <br>
+<img src="https://lh3.googleusercontent.com/-EOol-Rcw-IQ/Wc3sXgBm5QI/AAAAAAAAAeQ/uXrOXSca9r8SCAwg8nnwmjRmWOctZytvACLcBGAs/s0/001.jpg" alt="enter image description here" title="001.jpg"> <br>
+在一个空配置的设备上，12.1.1.1 Telnet到12.1.1.2 我们发现TCP会话已经正常建立，并且了也传递了部分TCP（Telnet数据）之所以无法进入设备是因为我们没有给 line vty配置密码，所以被IOS 拒绝。</p>
+
+<pre><code>R1#telnet 12.1.1.2
+Trying 12.1.1.2 ... Open
+Password required, but none set
+[Connection to 12.1.1.2 closed by foreign host]
+</code></pre>
+
+<p>那么进入正题，既然提示需要配置一个Password，那么就配置一个好了。配置方法如下。</p>
+
+<pre><code>R2(config)#line vty 0 15
+R2(config-line)#password ccie43413
+R2(config-line)#password ?
+0 Specifies an UNENCRYPTED password will follow
+7 Specifies a HIDDEN password will follow
+LINE The UNENCRYPTED (cleartext) line password
+</code></pre>
+
+<p>在配置Password的时候可以配置“0” 明文方式，也可以配置“7”密文（HIDDEN）方式。 <br>
+当然这里需要注意的是在配置 Password 7 的时候并不能直接输入字符的，这样配置是无法下发下去的，需要先将密码转换为密文的方式才能下发。（若不指定密码等级，那么将默认使用“0”级，明文方式进行配置下发）</p>
+
+<pre><code>R2(config)#line vty 0 15
+R2(config-line)#password 7 ccie43413
+Invalid encrypted password: ccie43413
+R2(config-line)#password 7 020507520E525C751D1D
+</code></pre>
+
+<p>虽说是采用password 7 加密方式，其实这种方式也不安全，加密后的文本可以轻易被破解。可以去 <a href="https://www.m00nie.com/type-7-password-tool/">Cisco Type 7 Password Tool</a> 输入需要加密的Password或者输入要解密的Password ，就可以得到密码。 <br>
+<img src="https://lh3.googleusercontent.com/-pSUdzV_cwdY/Wc3s-FdauXI/AAAAAAAAAec/bWz8JTDTRNwsB5HRY2VeYfY8KCq_sppdACLcBGAs/s0/002.jpg" alt="enter image description here" title="002.jpg"></p>
+
+
+
+<h3 id="配置">配置</h3>
+
+<pre><code>R2
+line vty 0 4
+password 7 020507520E525C751D1D
+login
+line vty 5 15
+password 7 020507520E525C751D1D
+login
+验证：
+R1#telnet 12.1.1.2
+Trying 12.1.1.2 ... Open
+User Access Verification
+Password: 
+R2&gt;
+</code></pre>
+
+
+
+<h2 id="telnet-usernamepassword管理设备">Telnet Username+Password管理设备</h2>
+
+<p>同样进行Telnet登录的时候也可以进行用户名和密码的方式来登录到设备上，需要在line vty 下配置login local 命令（默认是login）</p>
+
+<pre><code>R2(config)#line vty 0 15
+R2(config-line)#login local
+</code></pre>
+
+<p>然后是在全局下创建用户名和密码</p>
+
+<pre><code>R2(config)#username ccie43413 password ?
+0 Specifies an UNENCRYPTED password will follow
+7 Specifies a HIDDEN password will follow
+LINE The UNENCRYPTED (cleartext) user password
+R2(config)#username ccie43413 secret ?
+0 Specifies an UNENCRYPTED secret will follow
+4 Specifies a SHA256 ENCRYPTED secret will follow
+5 Specifies a MD5 ENCRYPTED secret will follow
+LINE The UNENCRYPTED (cleartext) user secret
+</code></pre>
+
+<p>使用password创建密码，若不指定密码类型，则默认为“0”明文方式，若使用secret创建密码，在新版本的IOS中将使用secret 4 创建加密密码。若在老版本的IOS中则使用secret 5 创建加密密码。 需要注意的是，在新版的IOS 15.2的IOS中才支持secret 4，如果你使用的是老版的IOS 12.4，那么secret 4可能不支持。</p>
+
+<p>secret 5 虽说是MD5加密但仍然不安全，在新版本的IOS中会提示此算法将被淘汰“Warning: MD5 encryption will be deprecated soon.Please move to SHA256 encryption.”</p>
+
+<p>若要生成secret 5 密钥可以找一个老的IOS设备，配置username ccie43413 secret ccie43413，show run 就可以看到secret 5 的密钥了。 <br>
+ 当然你可以通过Openssl去生成密钥，具体方法参见 <a href="https://tools.cisco.com/security/center/content/CiscoSecurityResponse/cisco-sr-20130318-type4">Using the openssl Tool to Generate a Type 5 Password</a> 。</p>
+
+
+
+<h3 id="配置-1">配置</h3>
+
+<pre><code>username ccie43413 secret 4 5eumjDyS.TauJikTRN0uboCxgj6pJEYb5tFrJ6efRUQ
+!
+line vty 0 4
+login local
+line vty 5 15
+login local
+!
+验证：
+R1#telnet 12.1.1.2
+Trying 12.1.1.2 ... Open
+User Access Verification
+Username: ccie43413
+Password: 
+R2&gt;
+</code></pre>
+
+
+
+<h2 id="telnet-无密码管理设备">Telnet 无密码管理设备</h2>
+
+<p>不少人可能因为工作需要的关系，如每次Telnet到思科设备上都需要输入密码实在是烦人，所以在此我发现通过一种方式可以不输入用户名和密码就可以直接管理思科设备。 <br>
+配置方法</p>
+
+<pre><code>R2(config)#line vty 0 15
+R2(config-line)#no login
+R2(config-line)#privilege level 15
+R2(config-line)#exit
+R2(config)#no aaa new-model
+</code></pre>
+
+<p><strong>no login</strong>是无需密码就可以直接接入vty线路，但是这时候只能进入在用户模式中进行操作即“&gt;”模式。这是因为如果vty线路默认不做权限等级限制默认的配置就是privilege level 1，权限比较低，所以我们需要补一个命令 “privilege level 15”进入的时候直接进入最高管理权限。另外需要注意的是，必须要关闭<strong>aaa new-model</strong>否则设备还是会去找用户名和密码。</p>
+
+
+
+<h3 id="配置-2">配置</h3>
+
+<pre><code>no aaa new-model
+!
+line vty 0 4
+privilege level 15
+no login
+line vty 5 15
+privilege level 15
+no login
+!
+R1#telnet 12.1.1.2          !验证部分
+Trying 12.1.1.2 ... Open
+
+R2#
+</code></pre>
+
+
+
+<h2 id="ssh-管理设备">SSH 管理设备</h2>
+
+<p>配置SSH的方法如下，首先你需要配置一个主机域，ip domain-name 命令，这个主机域会用于生成RSA密钥文件。</p>
+
+<pre><code>R2(config)#ip domain-name ccie43413.blogspot.com
+</code></pre>
+
+<p>然后去创建一个密钥使用<strong>crypto key generate rsa</strong>命令，指定rsa强度</p>
+
+<pre><code> R2(config)#crypto key generate rsa
+The name for the keys will be: R2.ccie43413.blogspot.com
+Choose the size of the key modulus in the range of 360 to 4096 for your
+General Purpose Keys. Choosing a key modulus greater than 512 may take
+a few minutes.
+How many bits in the modulus [512]: 1024
+% Generating 1024 bit RSA keys, keys will be non-exportable...
+[OK] (elapsed time was 1 seconds)
+*Aug 23 13:34:25.515: %SSH-5-ENABLED: SSH 1.99 has been enabled
+</code></pre>
+
+<p>创建完成之后可以通过 <strong>show crypto key mypubkey all</strong> 命令查看创建的密钥文件。 </p>
+
+<pre><code>R2#show crypto key mypubkey all
+% Key pair was generated at: 13:34:25 UTC Aug 23 2016
+Key name: R2.ccie43413.blogspot.com
+Key type: RSA KEYS
+Storage Device: not specified
+Usage: General Purpose Key
+Key is not exportable. Redundancy enabled.
+Key Data:
+30819F30 0D06092A 864886F7 0D010101 05000381 8D003081 89028181 00A79598
+E47CC2DB 10F21512 58FB525A 2D1124CA 0F023260 8F77517E 0305D087 7D4FBED5
+D09B9D12 FBBA7B2E AC2C7FD2 0EAF5B80 718191C8 6C111E6B 32757EBC 3EDFF46F
+9385B974 23947D5C 98BCB2EF F9484A9C 8916761E 62DCE0D6 8C2B223E 5574060E
+5D30F00D 610A5A84 B37ADEDE CE5DB93C DA7BF4BF ED42D965 24F932B4 95020301 0001
+% Key pair was generated at: 13:34:26 UTC Aug 23 2016
+Key name: R2.ccie43413.blogspot.com.server
+Key type: RSA KEYS
+Temporary key
+Usage: Encryption Key
+Key is not exportable. Redundancy enabled.
+Key Data:
+307C300D 06092A86 4886F70D 01010105 00036B00 30680261 00ADCAE4 ACF8A0D1
+C0C8F0B8 B27B8E6C B0D0F70B EC2AA537 50505AC2 21020871 842E0FE2 9D9311CE
+023F8FB1 9E621E0E 90E77A32 A2F42179 F164C84C 5D3BBF76 AAC8F3C4 6864FDB1
+1BEFDB20 93AB5729 DEF7D6EE CAF825CD CFCE9D87 81FC412C 87020301 0001
+</code></pre>
+
+<p>然后在vty线路下开启SSH功能，并且配置用户名密码方式认证</p>
+
+<pre><code>R2(config)#line vty 0 15
+R2(config-line)#transport input ssh
+R2(config-line)#login local
+R2(config-line)#exit
+R2(config)#username ccie43413 secret 4 5eumjDyS.TauJikTRN0uboCxgj6pJEYb5tFrJ6efRUQ
+</code></pre>
+
+
+
+<h3 id="配置-3">配置</h3>
+
+<pre><code>关键配置：
+ip domain name ccie43413.blogspot.com                                   !创建一个域
+!
+username ccie43413 secret 4 5eumjDyS.TauJikTRN0uboCxgj6pJEYb5tFrJ6efRUQ !配置用户名密码
+!
+crypto key generate rsa                                                 !此命令在show run 中不会显示
+!
+line vty 0 4
+ login local
+ transport input ssh                                                    !选择ssh登录方式
+line vty 5 15
+ login local
+ transport input ssh
+验证：
+R1#ssh -l ccie43413 12.1.1.2
+Password: 
+R2&gt;
+</code></pre>
+
+
+
+<h2 id="依据不同的用户给予不同的命令行权限">依据不同的用户给予不同的命令行权限</h2>
+
+<p>思科设备提供了两种实现此功能的方式，一种是用户登录到line上的时候，提供一个level等级，再依据等级给予相应的操作权限，但是这样并不利于管理，所以笔者采用的是view的方式来进行。 <br>
+ 首先需要开启aaa new-model</p>
+
+<pre><code>R2(config)#aaa new-model
+</code></pre>
+
+<p>然后配置parser view</p>
+
+<pre><code>R2(config)#parser view cisco1
+R2(config-view)#secret cisco1
+R2(config-view)#commands exec include ping
+R2(config-view)#exit
+R2(config)#parser view cisco2
+R2(config-view)#secret cisco2
+R2(config-view)#commands exec include traceroute
+</code></pre>
+
+<p>配置Telnet用户名和密码（开启了aaa new-model就相当于在vty链路下login local，只不过没有显示）</p>
+
+<pre><code> R2(config)#username ccie43413 password 0 ccie43413
+</code></pre>
+
+
+
+<h3 id="配置-4">配置</h3>
+
+<pre><code>关键配置：
+
+aaa new-model
+!
+username ccie43413 password 0 ccie43413
+!
+parser view cisco1
+secret 5 $1$21sD$LVag09YktIMdoYadE9fGy/
+commands exec include ping
+!
+parser view cisco2
+secret 5 $1$ot3I$2Ws704Ml7MXcAtEzmxSYI0
+commands exec include traceroute
+!
+
+验证：
+特定的用户只能执行特定的命令。
+R1#telnet 12.1.1.2
+Trying 12.1.1.2 ... Open
+User Access Verification
+Username: ccie43413
+Password: （这里输入的是Telnet的用户名和密码）
+R2&gt;enable view cisco1
+Password: （这里输入的是parser view的用户名和密码）
+R2#ping 12.1.1.1
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 12.1.1.1, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 8/9/12 ms
+R2#traceroute 12.1.1.1
+% Invalid input detected at '^' marker. 
+
+R1#telnet 12.1.1.2
+Trying 12.1.1.2 ... Open
+User Access Verification
+Username: ccie43413
+Password: 
+R2&gt;enable view cisco2
+Password: 
+R2#traceroute 12.1.1.1
+Type escape sequence to abort.
+Tracing the route to 12.1.1.1
+VRF info: (vrf in name/id, vrf out name/id)
+  1 12.1.1.1 12 msec 16 msec 8 msec
+R2#ping 12.1.1.1
+% Invalid input detected at '^' marker.
+R2#
+</code></pre>
+
+
+
+<h2 id="远程登录惩罚特性">远程登录惩罚特性</h2>
+
+<p>配置一些惩罚特性可以降低密码被破解的可能性，如下是配置命令。</p>
+
+<pre><code>R2(config)#login block-for 600 attempts 3 within 60
+R2(config)#login delay 2
+R2(config)#login quiet-mode access-class ccie43413
+ip access-list standard ccie43413
+permit 192.168.1.1
+R2(config)#login on-failure log
+R2(config)#login on-success log
+</code></pre>
+
+<p><strong>login block-for 600 attempts 3 within 60</strong> <br>
+ 如果有一个用户在60秒的时间内登录错误达3次，那么这个用户需要等待600秒的时间之后才可以重新连接Telnet会话</p>
+
+<p><strong>login delay 2</strong>  <br>
+ 指定连续登录的时间间隔</p>
+
+<p><strong>login quiet-mode access-class ccie43413</strong> <br>
+ 只要是匹配了ACL是“ccie43413”的这些IP地址，不受 login block-for和login delay的影响。</p>
+
+<p><strong>login on-failure log 和 login on-success log</strong> <br>
+ 相应的login日志记录</p>
+
+<p>log：</p>
+
+<pre><code>验证
+略
+*Aug 21 20:34:35.119: %SEC_LOGIN-4-LOGIN_FAILED: Login failed [user: 1] [Source: 1.1.1.1] [localport: 23] [Reason: Login Authentication Failed] at 20:34:35 UTC Sun Aug 21 2016
+*Aug 21 20:34:35.123: %SEC_LOGIN-1-QUIET_MODE_ON: Still timeleft for watching failures is 23 secs, [user: 1] [Source: 1.1.1.1] [localport: 23] [Reason: Login Authentication Failed] [ACL: ccie43413] at 20:34:35 UTC Sun Aug 21 2016
+*Aug 21 20:34:36.931: %SEC_LOGIN-5-QUIET_MODE_OFF: Quiet Mode is OFF, because block period timed out at 20:40:34 UTC Sun Aug 21 2016
+</code></pre>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li><a href="https://www.cisco.com/c/en/us/td/docs/ios/12_2/termserv/command/reference/ftersv_r/trflosho.html">Cisco IOS Terminal Services Command Reference, Release 12.2</a></li>
+</ol>
+
+<p><em>2017年9月29日 更新</em></p></div></body>
+</html>

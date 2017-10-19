@@ -1,0 +1,255 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+<title>IPSec VPN RRI(Reverse Route Injection) - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ipsec-vpn-rrireverse-route-injection">IPSec VPN RRI(Reverse Route Injection)</h1>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<p>RRI(Reverse route injection)是为需要通过IPsec 隧道来加密传输的流量自动创建下一跳指向相应VPN 对端的静态路由。当配置的crypto map是静态crypto map时，RRI是根据crypto map中的ACL所定义的流量来自动创建静态路由。<a href="#fn:1" id="fnref:1" title="See footnote" class="footnote">1</a><a href="#fn:2" id="fnref:2" title="See footnote" class="footnote">2</a>
+
+</p>
+
+<h2 id="应用场景">应用场景</h2>
+
+<pre><code>loopback1  +-----+12.1.1.1          +-----+23.1.1.2          +-----+34.1.1.3          +-----+loopback1  
+-----------|  R1 |-------F0/0-------|  R2 |-------F0/1-------|  R3 |-------F0/0-------|  R4 |-----------
+10.1.1.1/32+-----+          12.1.1.2+-----+          23.1.1.3+-----+          34.1.1.4+-----+40.1.1.1/32
+</code></pre>
+
+<p>如上所示，R2与R3建立Site-to-Site IPSec VPN ，数据流 10.1.1.1&lt;——&gt;40.1.1.1。 通常情况下需要在R1，R2，R3，R4上分别配置10.1.1.1和40.1.1.1 在路由层面可达。有没有一种方法在R2和R3建立IPSec VPN之后产生一条静态路由，再将静态路由重分发到ospf进程中保证内网设备R1和R4能够正常学习到 10.1.1.1和40.1.1.1的路由呢？这里我们就需要用到RRI(Reverse route injection) 这项功能了。</p>
+
+<p>R1和R2，R3和R4分别建立ospf邻居，当配置完成IPSec VPN，并且在接口下使能之后，RRI会依据配置的“感兴趣的数据流”去产生一条静态路由指向IPSec VPN peer ，产生了静态路由之后，再将静态路由重分发到ospf进程中，这样R1和R4就可以学习到彼此的内网路由，保证了路由层面完整性。</p>
+
+
+
+<h2 id="配置命令说明">配置命令说明</h2>
+
+<blockquote>
+  <p><strong>reverse-route</strong> [<strong>static</strong> | <strong>tag</strong> <em>tag-id</em> [<strong>static</strong>] | <strong>remote-peer</strong> [<strong>static</strong>] | <strong>remote-peer</strong> <em>ip-address</em> [<strong>static</strong>]]</p>
+</blockquote>
+
+<pre><code>Router (config-crypto-map)# reverse-route
+Creates source proxy information for a crypto map entry. 
+Note The gateway keyword can be added to enable the dual route functionality for default gateway support.
+
+R2(config-crypto-map)#reverse-route static 
+RRI is added on the static crypto map, which creates routes on the basis of the source network and source netmask that are defined in the crypto access control list (ACL):
+In Cisco IOS Release 12.3(14)T and later releases, for the static map to retain this same behavior of creating routes on the basis of crypto ACL content, the static keyword is required, that is, reverse-route static.
+
+Router (config-crypto-map)# set reverse-route distance 20
+Specifies a distance metric to be used or a tag value to be associated with these routes.
+
+Router (config-crypto-map)# reverse-route remote peer 10.1.1.1 gateway
+Creates source proxy information for a crypto map entry.
+</code></pre>
+
+
+
+<h2 id="配置">配置</h2>
+
+
+
+<h5 id="r1配置">R1配置:</h5>
+
+<pre><code>!
+router ospf 1
+!
+interface Loopback1
+ ip address 10.1.1.1 255.255.255.255
+ ip ospf 1 area 0
+!
+interface FastEthernet0/0
+ ip address 12.1.1.1 255.255.255.0
+ ip ospf 1 area 0
+!
+</code></pre>
+
+
+
+<h5 id="r2配置">R2配置:</h5>
+
+<pre><code>!
+crypto ikev2 proposal ikev2-proposal 
+ encryption aes-cbc-256
+ integrity sha512
+ group 16
+!
+crypto ikev2 policy ikev2-policy 
+ match fvrf any
+ proposal ikev2-proposal
+!
+crypto ikev2 keyring ikev2-keyring
+ peer ccie43413
+  address 23.1.1.3
+  pre-shared-key local ccie43413
+  pre-shared-key remote ccie43413
+ !
+!
+crypto ikev2 profile ikev2-profile
+ match identity remote address 23.1.1.3 255.255.255.255 
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local ikev2-keyring
+!
+crypto ipsec transform-set ikev2-transform-set esp-aes esp-sha-hmac 
+ mode tunnel
+!
+crypto map ikev2-map 10 ipsec-isakmp 
+ set peer 23.1.1.3
+ set transform-set ikev2-transform-set 
+ set ikev2-profile ikev2-profile
+ match address vpn
+ reverse-route static
+!
+ip access-list extended vpn
+ permit ip 10.1.1.0 0.0.0.255 40.1.1.0 0.0.0.255
+!
+interface FastEthernet0/0
+ ip address 12.1.1.2 255.255.255.0
+ ip ospf 1 area 0
+!
+interface FastEthernet0/1
+ ip address 23.1.1.2 255.255.255.0
+ crypto map ikev2-map
+!
+router ospf 1
+ redistribute static subnets
+!
+</code></pre>
+
+
+
+<h5 id="r3配置">R3配置:</h5>
+
+<pre><code>!
+crypto ikev2 proposal ikev2-proposal 
+ encryption aes-cbc-256
+ integrity sha512
+ group 16
+!
+crypto ikev2 policy ikev2-policy 
+ match fvrf any
+ proposal ikev2-proposal
+!
+crypto ikev2 keyring ikev2-keyring
+ peer ccie43413
+  address 23.1.1.2
+  pre-shared-key local ccie43413
+  pre-shared-key remote ccie43413
+ !
+!
+crypto ikev2 profile ikev2-profile
+ match identity remote address 23.1.1.2 255.255.255.255 
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local ikev2-keyring
+!
+crypto ipsec transform-set ikev2-transform-set esp-aes esp-sha-hmac 
+ mode tunnel
+!
+crypto map ikev2-map 10 ipsec-isakmp 
+ set peer 23.1.1.2
+ set transform-set ikev2-transform-set 
+ set ikev2-profile ikev2-profile
+ match address vpn
+ reverse-route static
+!
+ip access-list extended vpn
+ permit ip host 40.1.1.1 host 10.1.1.1
+!
+interface FastEthernet0/0
+ ip address 34.1.1.3 255.255.255.0
+ ip ospf 1 area 0
+!
+interface FastEthernet0/1
+ ip address 23.1.1.3 255.255.255.0
+ crypto map ikev2-map
+!
+router ospf 1
+ redistribute static subnets
+!
+</code></pre>
+
+
+
+<h5 id="r4配置">R4配置:</h5>
+
+<pre><code>!
+router ospf 1
+!
+interface Loopback1
+ ip address 40.1.1.1 255.255.255.255
+ ip ospf 1 area 0
+!
+interface FastEthernet0/0
+ ip address 34.1.1.4 255.255.255.0
+ ip ospf 1 area 0
+!
+</code></pre>
+
+
+
+<h2 id="附录">附录</h2>
+
+<pre><code>R2#show crypto route 
+
+VPN Routing Table: Shows RRI and VTI created routes
+Codes: RRI - Reverse-Route, VTI- Virtual Tunnel Interface
+        S - Static Map ACLs
+
+Routes created in table GLOBAL DEFAULT
+40.1.1.0/255.255.255.0 [1/0] via 23.1.1.3 tag 0 count 1 rtid 5
+                                on FastEthernet0/1 RRI  S
+R2#show ip rou
+R2#show ip route 
+Codes: L - local, C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route, H - NHRP, l - LISP
+       + - replicated route, % - next hop override
+
+Gateway of last resort is not set
+
+      10.0.0.0/32 is subnetted, 1 subnets
+O        10.1.1.1 [110/2] via 12.1.1.1, 06:24:32, FastEthernet0/0
+      12.0.0.0/8 is variably subnetted, 2 subnets, 2 masks
+C        12.1.1.0/24 is directly connected, FastEthernet0/0
+L        12.1.1.2/32 is directly connected, FastEthernet0/0
+      23.0.0.0/8 is variably subnetted, 2 subnets, 2 masks
+C        23.1.1.0/24 is directly connected, FastEthernet0/1
+L        23.1.1.2/32 is directly connected, FastEthernet0/1
+      40.0.0.0/24 is subnetted, 1 subnets
+S        40.1.1.0 [1/0] via 23.1.1.3
+R2#show run | s ip route
+R2#
+</code></pre>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<div class="footnotes"><hr><ol><li id="fn:1"><a href="http://www.china-ccie.com/doc/vpn/vpn.html#46">china-ccie,Reverse route injection (RRI)</a> <a href="#fnref:1" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:2"><a href="http://www.cisco.com/en/US/docs/ios-xml/ios/sec_conn_vpnav/configuration/15-2mt/sec-rev-rte-inject.html">cisco,Reverse Route Injection</a> <a href="#fnref:2" title="Return to article" class="reversefootnote">↩</a></li></ol></div></div></body>
+</html>

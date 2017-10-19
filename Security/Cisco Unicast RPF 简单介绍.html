@@ -1,0 +1,203 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+
+
+<title>Cisco Unicast RPF 简单介绍 - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="cisco-unicast-rpf-简单介绍">Cisco Unicast RPF 简单介绍</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#cisco-unicast-rpf-简单介绍">Cisco Unicast RPF 简单介绍</a><ul>
+<li><a href="#介绍">介绍</a></li>
+<li><a href="#严格urpf检查">严格uRPF检查</a></li>
+<li><a href="#松散的rpf检查">松散的RPF检查</a></li>
+<li><a href="#默认路由urpf检查">默认路由uRPF检查</a></li>
+<li><a href="#使用acl免urpf检查">使用ACL免uRPF检查</a></li>
+<li><a href="#gre-tunnel-keepalives-urpf检查">GRE Tunnel Keepalives uRPF检查</a></li>
+<li><a href="#unicast-rpf-实验视频">Unicast RPF 实验(视频）</a></li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<p>uRPF（Unicast reverse path forwarding），简称单播逆向路由转发，是一种防止IP欺骗的技术，通常情况下网络设备在转发数据的时候关心的是目的（Destination），并不关心源（Source），而uRPF技术就是关心源（Source）的一个技术。即，从某个接口进来的数据包，能否从此接口在返回到源（Source）上，如果可以从入接口返回到源，那么将通过uRPF检查完成数据转发，反之亦然。</p>
+
+<ol>
+<li>严格uRPF检查</li>
+<li>松散uRPF检查</li>
+<li>默认路由uRPF检查</li>
+<li>使用ACL免uRPF检查</li>
+<li>GRE Tunnel Keepalives uRPF检查</li>
+<li>Unicast RPF 实验</li>
+</ol>
+
+
+
+<h2 id="严格urpf检查">严格uRPF检查</h2>
+
+<p>RPF检查分为两种，一种是严格方式，另外一种是松散方式。严格方式要求，数据包从那个接口进来，那么指向源（Source）的路由下一跳也必须是数据包进来的接口。若不匹配则丢弃。（The rx option enables a Strict Mode uRPF on the router. This mode ensures that the router reaches the source address only via the interface on which the packet was received.）</p>
+
+<p>配置命令：</p>
+
+<pre><code>R1(config-if)#ip verify unicast source reachable-via rx
+</code></pre>
+
+
+
+<h2 id="松散的rpf检查">松散的RPF检查</h2>
+
+<p>松散的RPF检查，只关心有没有去往源（Source）的路由，如果有那么就通过检查，如果没有则丢弃。与严格方式不同，严格方程除了关心有没有路由还关心流量进来的接口。（The any option enables a Loose Mode uRPF on the router. This mode allows the router to reach the source address via any interface. <br>
+）</p>
+
+<p>配置命令：</p>
+
+<pre><code>R1(config-if)#ip verify unicast source reachable-via any 
+</code></pre>
+
+
+
+<h2 id="默认路由urpf检查">默认路由uRPF检查</h2>
+
+<p>有的设备上为了避免环路，就会配置ip route 0.0.0.0 0.0.0.0 null 0 来避免网络环路对这样的路由是否也能参与到uRPF检查呢？那么可以通过allow-default 选项来完成。<strong>如果配置了此选项，那么默认路由将不适用于uRPF检查</strong>，必须使用明细路由来完成uRPF检查，反之亦然。（You can also use the allow-default option, so that the default route can match when checking source address.）</p>
+
+<p>配置命令：</p>
+
+<pre><code>ip verify unicast source reachable-via { any | rx } allow-default 
+</code></pre>
+
+
+
+<h2 id="使用acl免urpf检查">使用ACL免uRPF检查</h2>
+
+<p>如果想让某些源不参与uRPF检查，可以使用挂载ACL，ACL中所匹配的条目不适用于RPF检查。 <br>
+配置命令：</p>
+
+<pre><code>R1(config)#access-list 100 permit ip host 222.222.222.222 any
+R1(config-if)#ip verify unicast reverse-path 100
+</code></pre>
+
+
+
+<h2 id="gre-tunnel-keepalives-urpf检查">GRE Tunnel Keepalives uRPF检查</h2>
+
+<p>了解GRE Tunnel keepalive机制</p>
+
+<pre><code>tunnel ip 192.168.1.5     +----------------Interface Tunnel----------------+tunnel ip 192.168.1.7     
+tunnel source 5.5.5.5     |                                                |tunnel source 7.7.7.7     
+tuneel destiantion 7.7.7.7|                                                |tuneel destiantion 5.5.5.5
+                          |                                                |                          
+                          |                                                |                          
+                          |                                                |                          
+                          |                                                |                          
+                          |                                                |                          
+                         +\-----+  56.1.1.0/24 +------+  67.1.1.0/24 +-----\+                         
+                         |  R5  |--------------|  R6  |--------------|  R7  |                         
+                         +------+.5          .6+------+.6          .7+------+                         
+</code></pre>
+
+<p>如上图所示。</p>
+
+<pre><code>R5
+tunnel source 5.5.5.5
+tuneel destiantion 7.7.7.7
+R7
+tunnel source 7.7.7.7
+tuneel destiantion 5.5.5.5
+</code></pre>
+
+<p>那么以R5为例，R5发送的keepalive内容如下</p>
+
+<pre><code>+-----------++-----------++------------++----------------------------------+
+|SRC 5.5.5.5||DST 7.7.7.7||GRE Head(IP)||SRC 7.7.7.7||DST 5.5.5.5||GRE Head|
++-----------++-----------++------------++----------------------------------+
+
+
+Frame 4: 62 bytes on wire (496 bits), 62 bytes captured (496 bits) on interface 0
+Ethernet II, Src: ca:01:1a:64:00:08 (ca:01:1a:64:00:08), Dst: ca:02:02:fc:00:08 (ca:02:02:fc:00:08)
+Internet Protocol Version 4, Src: 5.5.5.5, Dst: 7.7.7.7
+Generic Routing Encapsulation (IP)
+Internet Protocol Version 4, Src: 7.7.7.7, Dst: 5.5.5.5
+Generic Routing Encapsulation (Possible GRE keepalive packet)
+</code></pre>
+
+<p>当R7收到数据包之后对数据包进行检查，观察GRE tunnel 内层的信息，观察到内层的目的IP地址是去往R5的，于是乎就将GRE内层的信息在重新传回到R5上，数据包如下：</p>
+
+<pre><code>+-----------++-----------++--------+
+|SRC 7.7.7.7||DST 5.5.5.5||GRE Head|
++-----------++-----------++--------+
+
+Frame 5: 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface 0
+Ethernet II, Src: ca:02:02:fc:00:08 (ca:02:02:fc:00:08), Dst: ca:01:1a:64:00:08 (ca:01:1a:64:00:08)
+Internet Protocol Version 4, Src: 7.7.7.7, Dst: 5.5.5.5
+Generic Routing Encapsulation (Possible GRE keepalive packet)
+</code></pre>
+
+<p>R5收到了这个数据包即认为tunnel 链路还是存活的。就继续保持UP状态，反之亦然。</p>
+
+<p>简单了解了GRE keepalive机制，如果uRPF的检查配置在R7的tunnel接口上会发生什么事情呢？ <br>
+R7的tunnel 会DOWN掉。DOWN掉的原因就是因为R7在回送keepalive的时候出现了问题，即R7要回送如下报文的时候，进行uRPF检查 <br>
+发现去往7.7.7.7的出接口并不是tunnel接口，所以RPF检查失败，导致回送的数据R5迟迟收不到，造成R5端认为tunnel keepalive 出现问题，即R5 tunnel 为DOWN状态。 </p>
+
+<pre><code>R7#show ip route 7.7.7.7
+Routing entry for 7.7.7.7/32
+  Known via "connected", distance 0, metric 0 (connected, via interface)
+  Routing Descriptor Blocks:
+  * directly connected, via Loopback1
+      Route metric is 0, traffic share count is 1
+</code></pre>
+
+<p>解决此问题的办法就是需要配置一条ACL,让7.7.7.7免于RPF检查，这样R7正常回送keepalive也就不会导致R5端tunnel为DOWN状态了。</p>
+
+<p>配置命令：</p>
+
+<pre><code>access-list 1 permit 7.7.7.7
+ip verify unicast source reachable-via rx 1
+</code></pre>
+
+
+
+<h2 id="unicast-rpf-实验视频">Unicast RPF 实验(视频）</h2>
+
+<p>参见：<a href="https://www.youtube.com/watch?v=a_CodGbH6vA">https://www.youtube.com/watch?v=a_CodGbH6vA</a></p>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li><a href="http://www.cisco.com/c/en/us/about/security-center/unicast-reverse-path-forwarding.html">Understanding Unicast Reverse Path Forwarding</a></li>
+<li><a href="https://www.cisco.com/c/en/us/td/docs/ios/12_2/security/configuration/guide/fsecur_c/scfrpf.html">Configuring Unicast Reverse Path Forwarding</a></li>
+<li><a href="http://www.routerwrangler.com/2011/09/gre-keepalive-and-unicast-rpf.html?m=1">GRE Keepalive and Unicast RPF</a></li>
+<li><a href="https://www.cisco.com/c/en/us/td/docs/routers/10000/10008/configuration/guides/broadband/bba/urpf.pdf">Unicast Reverse Path Forwarding(PDF)</a></li>
+<li><a href="https://www.cisco.com/c/en/us/support/docs/ip/generic-routing-encapsulation-gre/118370-technote-gre-00.html">GRE Tunnel Keepalives</a></li>
+<li><a href="https://www.cisco.com/c/en/us/support/docs/ip/generic-routing-encapsulation-gre/118370-technote-gre-00.html">GRE Tunnel Keepalives2</a></li>
+</ol>
+
+<p><em>2017年10月12日更新</em></p></div></body>
+</html>

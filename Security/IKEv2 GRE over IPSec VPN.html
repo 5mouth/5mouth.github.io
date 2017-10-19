@@ -1,0 +1,195 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+<title>IKEv2 GRE over IPSec VPN - 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ikev2-gre-over-ipsec-vpn">IKEv2 GRE over IPSec VPN</h1>
+
+<h2 id="介绍">介绍</h2>
+
+<p>GRE over IPSec VPN主要用来解决传统 Site to Site面临的一些问题。</p>
+
+<ol>
+<li>站点和站点之间不能运行路由协议。</li>
+<li>没有“接口”概念使得QOS，ACL无法应用在IPsec VPN上。</li>
+<li>当网络变的复杂的时候需要配置很多个“感兴趣数据流”使得ACL配置复杂。</li>
+</ol>
+
+<p>解决上面3个棘手的问题方法是通过GRE over IPSec VPN或VTI（SVTI、DVTI），VTI不在本文讨论范围之内，本文主要解释GRE over IPSec VPN。 <br>
+GRE我们都了解是一种三层的隧道技术，GRE可以很好的传递组播数据流，使得站点和站点之间运行动态路由协议成为可能。另外GRE提供了 interface tunnel ，使得QOS、ACL这些基于接口应用的服务得以实现。GRE提供接口，我们只需要把流量引入到tunnel接口里面即可，而不需要逐条配置感兴趣数据流，使得配置得到了简化，网络更易控制。</p>
+
+
+
+<h2 id="配置关键配置">配置(关键配置)</h2>
+
+
+
+<h5 id="拓扑图如下">拓扑图如下：</h5>
+
+
+
+<pre class="prettyprint"><code class=" hljs brainfuck">                                <span class="hljs-comment">192</span><span class="hljs-string">.</span><span class="hljs-comment">168</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">2</span>          <span class="hljs-comment">192</span><span class="hljs-string">.</span><span class="hljs-comment">168</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">3</span>    
+                                  <span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">Tunnel</span> <span class="hljs-comment">1</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span>
+                                  <span class="hljs-comment">|</span>                         <span class="hljs-comment">|</span>
+    <span class="hljs-comment">10</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span>                      <span class="hljs-comment">|</span>                         <span class="hljs-comment">|</span>                     <span class="hljs-comment">40</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span>
+     <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span><span class="hljs-comment">12</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span>           <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">\</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span><span class="hljs-comment">23</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">2</span>           <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">\</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span><span class="hljs-comment">34</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">3</span>           <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>
+     <span class="hljs-comment">|</span> <span class="hljs-comment">R1</span>  <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">F0/0</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span> <span class="hljs-comment">R2</span>  <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">F0/1</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span> <span class="hljs-comment">R3</span>  <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">F0/0</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span> <span class="hljs-comment">R4</span>  <span class="hljs-comment">|</span>
+     <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>           <span class="hljs-comment">12</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">2</span><span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>           <span class="hljs-comment">23</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">3</span><span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>           <span class="hljs-comment">34</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">4</span><span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span></code></pre>
+
+
+
+<h5 id="r2配置">R2配置:</h5>
+
+<pre><code>crypto ikev2 proposal ikev2-proposal 
+ encryption aes-cbc-256
+ integrity sha512
+ group 16
+!
+crypto ikev2 policy ikev2-policy 
+ match fvrf any
+ proposal ikev2-proposal
+!
+crypto ikev2 keyring ikev2-keyring
+ peer ccie43413
+  address 23.1.1.3
+  pre-shared-key local ccie43413
+  pre-shared-key remote ccie43413
+ !
+!
+!
+crypto ikev2 profile ikev2-profile
+ match identity remote address 23.1.1.3 255.255.255.255 
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local ikev2-keyring
+!
+interface Tunnel1
+ ip address 192.168.1.2 255.255.255.0
+ ip ospf 1 area 0
+ tunnel source FastEthernet0/1
+ tunnel destination 23.1.1.3
+!
+!
+interface FastEthernet0/1
+ ip address 23.1.1.2 255.255.255.0
+ speed auto
+ duplex auto
+ crypto map ikev2-map
+!
+</code></pre>
+
+
+
+<h2 id="gre-over-ipsecvpn流程分析">GRE over IPSecVPN流程分析</h2>
+
+<p>流程图来自于此<a href="#fn:1" id="fnref:1" title="See footnote" class="footnote">1</a> 。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs brainfuck">                                             <span class="hljs-comment">Packet</span> <span class="hljs-comment">Flow</span> <span class="hljs-comment">Though</span> <span class="hljs-comment">Tunnel</span> <span class="hljs-comment">Interface</span>                                               
+                                                             <span class="hljs-comment">R2</span>                                                                  
+                       <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>                           
+                       <span class="hljs-comment">|</span>                                                                           <span class="hljs-comment">|</span>                           
+<span class="hljs-comment">FastEthernet0/0</span>        <span class="hljs-comment">|</span>         <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>                    <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>          <span class="hljs-comment">|</span>   <span class="hljs-comment">FastEthernet0/1</span>         
+<span class="hljs-comment">IP</span> <span class="hljs-comment">Addr:12</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">2/24</span> <span class="hljs-comment">/</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">\</span>      <span class="hljs-comment">|Route</span> <span class="hljs-comment">Lookup</span>    <span class="hljs-comment">|</span>                    <span class="hljs-comment">|Route</span> <span class="hljs-comment">Lookup</span>    <span class="hljs-comment">|</span>      <span class="hljs-comment">/</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">\IP</span> <span class="hljs-comment">Addr:23</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">2/24</span>     
+<span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span>&gt;<span class="hljs-comment">|Input|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span>&gt;<span class="hljs-comment">|</span>                <span class="hljs-comment">|</span>                    <span class="hljs-comment">|</span>                <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span>&gt;<span class="hljs-comment">|Output|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment"></span>    
+                    <span class="hljs-comment">\</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">/</span>      <span class="hljs-comment">|Yields</span> <span class="hljs-comment">ifc:</span> <span class="hljs-comment">Tun1|</span>                    <span class="hljs-comment">|Yields</span> <span class="hljs-comment">ifc:</span> <span class="hljs-comment">Tun1|</span>      <span class="hljs-comment">\</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">/</span>                       
+                       <span class="hljs-comment">|</span>         <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>                    <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>          <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>                <span class="hljs-comment">|</span>                                      <span class="hljs-comment"></span>                   <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>                <span class="hljs-comment">|</span>                                      <span class="hljs-comment">|</span>                   <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>               <span class="hljs-comment">/</span><span class="hljs-literal">-</span><span class="hljs-comment">\</span>                                     <span class="hljs-comment">|</span>                   <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>               <span class="hljs-comment">|T|</span>  <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>          <span class="hljs-comment">|</span>                   <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>               <span class="hljs-comment">|u|</span>  <span class="hljs-comment">|Tunnel1</span>                <span class="hljs-comment">|</span>          <span class="hljs-comment">|</span>                   <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>               <span class="hljs-comment">|n|</span>  <span class="hljs-comment">|IP</span> <span class="hljs-comment">addr:</span> <span class="hljs-comment">192</span><span class="hljs-string">.</span><span class="hljs-comment">168</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">2/24|</span>          <span class="hljs-comment">|</span>                   <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>               <span class="hljs-comment">|n|</span>  <span class="hljs-comment">|Source:</span> <span class="hljs-comment">FastEthernet0/1|</span>          <span class="hljs-comment">|</span>                   <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>               <span class="hljs-comment">|e|</span>  <span class="hljs-comment">|Destination:</span> <span class="hljs-comment">23</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">1</span><span class="hljs-string">.</span><span class="hljs-comment">3</span>  <span class="hljs-comment">|</span>          <span class="hljs-comment">|</span>                   <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>               <span class="hljs-comment">|l|</span>  <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>          <span class="hljs-comment">|</span>                   <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>               <span class="hljs-comment">\</span><span class="hljs-literal">-</span><span class="hljs-comment">/</span>                                     <span class="hljs-comment">|</span>                   <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>                <span class="hljs-comment">|</span>                              <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>             <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>                <span class="hljs-comment">|</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span>&gt;<span class="hljs-comment">|Encapsulation|</span>             <span class="hljs-comment">|</span>                           
+                       <span class="hljs-comment">|</span>                                               <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>             <span class="hljs-comment">|</span>                           
+                       <span class="hljs-literal">+</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">+</span>                           
+</code></pre>
+
+<p>1.数据包通过FastEthernet0/0接口进入。 <br>
+【IP.Dst40.1.1.1】【IP.Src10.1.1.1】【Date】</p>
+
+<p>2.目的路由查找，去往40.1.1.1目的地址的路由下一跳是tunnel接口。</p>
+
+<p>3.数据包移交给tunnel接口进行封装操作。</p>
+
+<p>4.在封装期间产生新的IP数据包。 <br>
+Original Packet：【IP.Dst40.1.1.1】【IP.Src10.1.1.1】【Date】 <br>
+　　　　　　　　　　　　　　　　　　　　|| <br>
+　　　　　　　　　　　　　　　　　　　　V <br>
+Encapsulated Packet：【IP.Dst23.1.1.3】【IP.Src23.1.1.2】【GRE】【IP.Dst40.1.1.1】【IP.Src10.1.1.1】【Date】</p>
+
+<p>5.新的数据包再次执行路由查找。</p>
+
+<p>6.目的路由查找，去往23.1.1.3目的路由的下一跳是FastEthernet0/1接口，###匹配crypto map策略执行ipsec vpn流程</p>
+
+<p>7.执行完成ipsec vpn的数据包将从FastEthernet0/1接口转发出去。</p>
+
+<p>注：如果crypto map 应用在tunnel接口上，那么当完成GRE封装之后就直接匹配crypto map直接进行ipsec vpn流程。</p>
+
+
+
+<h2 id="附录">附录</h2>
+
+<p>除了之前介绍的GRE over IPSec VPN的配置方法，如下的配置方法也能完成同样的效果。 这种被称之为“Tunnel Protection and Crypto Sockets”，可参见<a href="#fn:2" id="fnref:2" title="See footnote" class="footnote">2</a><a href="#fn:3" id="fnref:3" title="See footnote" class="footnote">3</a>，在此不涉及。</p>
+
+<pre><code>crypto ikev2 proposal ikev2-proposal 
+  encryption aes-cbc-256
+  integrity sha512
+  group 16
+ !
+ crypto ikev2 policy ikev2-policy 
+  match fvrf any
+  proposal ikev2-proposal
+ !
+ crypto ikev2 keyring ikev2-keyring
+ peer 23.1.1.3
+ address 23.1.1.3
+ pre-shared-key local ccie43413
+ pre-shared-key remote ccie43413
+ !
+ crypto ikev2 profile ikev2-profile
+ match identity remote address 23.1.1.3 255.255.255.255
+ identity local address 23.1.1.2
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local ikev2-keyring
+ !
+ crypto ipsec transform-set ipsec-transform esp-aes 256 esp-sha512-hmac
+ mode tunnel
+ !
+ crypto ipsec profile ipsec-profile 
+ set transform-set ipsec-transform
+ set ikev2-profile ikev2-profile
+ !
+ interface Tunnel1
+ tunnel protection ipsec profile ipsec-profile
+</code></pre>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<div class="footnotes"><hr><ol><li id="fn:1">IKEv2 IPsec Virtual Private Networks Understanding and Deploying:Figure 4-7 Packet Flow Though Tunnel Interface <a href="#fnref:1" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:2"><a href="http://www.cisco.com/en/US/docs/ios-xml/ios/sec_conn_dmvpn/configuration/15-2mt/sec-conn-dmvpn-share-ipsec-w-tun-protect.html">Sharing IPSec with Tunnel Protection</a> <a href="#fnref:2" title="Return to article" class="reversefootnote">↩</a></li><li id="fn:3"><a href="http://www.cisco.com/c/en/us/td/docs/ios-xml/ios/sec_conn_dmvpn/configuration/xe-3s/sec-conn-dmvpn-xe-3s-book/sec-conn-dmvpn-share-ipsec-w-tun-protect.html">Dynamic Multipoint VPN Configuration Guide, Cisco IOS XE Release 3S Sharing IPsec with Tunnel Protection</a> <a href="#fnref:3" title="Return to article" class="reversefootnote">↩</a></li></ol></div></div></body>
+</html>

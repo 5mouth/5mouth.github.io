@@ -1,0 +1,143 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+<title>IKEv2建立（IKEv2 Packet Exchange）- 5mouth</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="ikev2建立ikev2-packet-exchange">IKEv2建立（IKEv2 Packet Exchange）</h1>
+
+
+
+<h2 id="介绍">介绍</h2>
+
+<p>IKEv1最初在RFC2409中进行定义，明确规定了IKEv1交互过程中分为Main Mode 和Aggressive Mode两种模式，在Main Mode中交互6个报文，在Aggressive Mode中交互3个报文。IKEv2与IKEv1不同，IKEv2最初在RFC 4306中进行定义，又在RFC5996中进行了修正。在IKEv2中没有Main Mode和Aggressive Mode说法。而是IKE_SA_INIT和IKE_AUTH 。在相同的环境下IKEv1完成建立需要交互9个报文，而IKEv2仅需要4个报文就能完成建立，相比于IKEv1，IKEv2更加紧凑和高效。 <br>
+下图是IKEv2 Packet Exchange 交互过程，来自“IKEv2 IPsec Virtual Private Networks Understanding and Deploying”</p>
+
+<div class="sequence-diagram"><svg height="343" version="1.1" width="753.1875" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="overflow: hidden; position: relative; left: -0.5px; top: -0.21875px;"><desc style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);">Created with Raphaël 2.1.2</desc><defs style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><marker id="raphael-marker-endblock55-obj59" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj62" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj68" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker><marker id="raphael-marker-endblock55-obj71" markerHeight="5" markerWidth="5" orient="auto" refX="2.5" refY="2.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#raphael-marker-block" transform="rotate(180 2.5 2.5) scale(1,1)" stroke-width="1.0000" fill="#000" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></use></marker></defs><rect x="10" y="20" width="71.328125" height="39" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="20.390625" y="30" width="51.328125" height="19" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45.6640625" y="39.5" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="5.5">Initiator</tspan></text><rect x="10" y="284" width="71.328125" height="39" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="20.390625" y="294" width="51.328125" height="19" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="45.6640625" y="303.5" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="5.5">Initiator</tspan></text><path fill="none" stroke="#000000" d="M45.6640625,59L45.6640625,284" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="418.6875" y="20" width="88.703125" height="39" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="429.078125" y="30" width="68.703125" height="19" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="463.0390625" y="39.5" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="5.5">Responder</tspan></text><rect x="418.6875" y="284" width="88.703125" height="39" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="429.078125" y="294" width="68.703125" height="19" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="463.0390625" y="303.5" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="5.5">Responder</tspan></text><path fill="none" stroke="#000000" d="M463.0390625,59L463.0390625,284" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="148.375" y="74.5" width="211.9375" height="19" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="254.3515625" y="84" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="5.5">IKE_SA_INIT( HDR, SAi1, KEi, Ni ）</tspan></text><path fill="none" stroke="#000000" d="M45.6640625,98C45.6640625,98,410.87535353563726,98,458.0425344335504,98" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj59)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="116.78125" y="113.5" width="275.109375" height="19" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="254.3515625" y="123" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="5.5">IKE_SA_INIT( HDR, SAr1, KEr, Nr,[CertReq]）</tspan></text><path fill="none" stroke="#000000" d="M463.0390625,137C463.0390625,137,97.82777146436274,137,50.66059056644963,137" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj62)" stroke-dasharray="0" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="483.0390625" y="157" width="175.796875" height="29" rx="0" ry="0" fill="none" stroke="#000000" stroke-width="2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="488.03125" y="162" width="165.796875" height="19" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="570.9375" y="171.5" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="5.5">↓Subsequent Encryption↓</tspan></text><rect x="55.875" y="201.5" width="397.375" height="19" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="254.3515625" y="211" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="5.5">IKE_AUTH(HDR, SK {IDi, [Cert], [CertReq],)[AUTH], SAi2, TSi, TSr}</tspan></text><path fill="none" stroke="#000000" d="M45.6640625,225C45.6640625,225,410.87535353563726,225,458.0425344335504,225" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj68)" stroke-dasharray="6,2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path><rect x="86.46875" y="240.5" width="335.734375" height="19" rx="0" ry="0" fill="#ffffff" stroke="none" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><text x="254.3515625" y="250" text-anchor="middle" font-family="Andale Mono, monospace" font-size="16px" stroke="none" fill="#000000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0); text-anchor: middle; font-family: &quot;Andale Mono&quot;, monospace; font-size: 16px;"><tspan style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);" dy="5.5">IKE_AUTH(HDR, SK {IDr, [Cert], [AUTH], SAr2, TSi, TSr})</tspan></text><path fill="none" stroke="#000000" d="M463.0390625,264C463.0390625,264,97.82777146436274,264,50.66059056644963,264" stroke-width="2" marker-end="url(#raphael-marker-endblock55-obj71)" stroke-dasharray="6,2" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path></svg></div>
+
+<p>· HDR: IKE header <br>
+· SAi1: Sets of cryptographic algorithms proposed by initiator <br>
+· SAr1: Specific of cryptographic algorithms chosen by responder <br>
+· KEi: Initiator key exchange material (uses DH group with highest local priority) <br>
+· KEr: Responder key exchange material <br>
+· Ni : Initiator nonce <br>
+· Nr: Responder nonce <br>
+· CertReq: Certificate request (optional). The square brackets [ ] surrounding the CertReq payload denotes this as optional. <br>
+·  SK { … } : Payload between { } is encrypted and integrity protected <br>
+·  IDi : Initiator identity <br>
+·  IDr : Responder identity <br>
+·  Cert : Initiator certificate (optional) <br>
+·  CertReq: Certificate request (optional) <br>
+·  AUTH: Initiator and responder authentication data (not present if initiatorauthenticates via EAP) <br>
+·  SAi2: Child SA transforms proposed by initiator <br>
+·  SAr2: Child SA transforms chosen by responder <br>
+·  TSi/TSr: Child SA traffic selectors (src/dst proxies)</p>
+
+<h2 id="ikesainit-exchange">IKE_SA_INIT Exchange</h2>
+
+<p>IKE_SA_INIT是ipsec vpn建立的初始交换，当完成IKE_SA_INIT交换之后后续其他的交互报文将被加密。下图是IKE_SA_INIT的数据包结构。</p>
+
+<p><img src="https://3.bp.blogspot.com/-b6sXZYj2nrY/WNH0BMJAH7I/AAAAAAAAASo/ULvO8j3gjv0uS_GEjnVVsOYMRECZAFYWACLcB/s1600/IKEv2-INIT.png" alt="enter image description here" title=""></p>
+
+<p>通过查看可以看到，在基础的IKE头部里面有多个payload，在payload又有多个Proposal组成，在Proposal中由多个Transform 组成。 <br>
+纵观整个IKE_SA_INIT数据包可以发现。在IKE_SA_INIT数据包中包括的内容有。</p>
+
+<p>· Security Association <br>
+　· Proposal  <br>
+　· Transform（Encryption Algorithm、Pseudo-random Function、Integrity Algorithm、Diffie-Hellman Group） <br>
+· Key Exchang <br>
+· Nonce </p>
+
+<p>通过观察可以看到，其实IKE_SA_INIT数据包中的内容就是IKEv1中主模式的1~4个报文。也就是说，IKE_SA_INIT对IKEv1中1~4个报文进行了整合，使得交互更加高效。通过IKE_SA_INIT传递“材料”就可以完成后续报文的加密工作，当IKE_SA_INIT交互完成之后后续其他交互的报文将被加密。</p>
+
+
+
+<h2 id="ikeauth-exchange">IKE_AUTH Exchange</h2>
+
+<p>一旦IKE_SA_INIT交换成功完成，IKE_AUTH交换将会开始，用于认证对方，并产生IPsec Security Associations。下图是IKE_AUTH的报文。因为关键的信息被加密，我们无法获知其中的内容，不过笔者通过查阅IKEv2 IPsec Virtual Private Networks Understanding and Deploying 和RFC5996发现这一部分还是可以说清楚的。</p>
+
+<pre><code>Internet Security Association and Key Management Protocol
+Initiator SPI: 82752e51d889cf91
+Responder SPI: 7f79f53a9737fe8f
+Next payload: Encrypted and Authenticated (46)
+Version: 2.0
+    0010 .... = MjVer: 0x2
+    .... 0000 = MnVer: 0x0
+Exchange type: IKE_AUTH (35)
+Flags: 0x08 (Initiator, No higher version, Request)
+    .... 1... = Initiator: Initiator
+    ...0 .... = Version: No higher version
+    ..0. .... = Response: Request
+Message ID: 0x00000001
+Length: 352
+Type Payload: Encrypted and Authenticated (46)
+    Next payload: Vendor ID (43)
+    0... .... = Critical Bit: Not Critical
+    Payload length: 324
+    Initialization Vector: e8d40dfc
+    Encrypted Data
+</code></pre>
+
+<p>在IKEv2中先通过messages#1 和messages#2创建IKE SA 镜像加密，然后通过messages#3和messages#4消息进行认证，认证完成之后将建立 CHILD_SA。其中IKE_AUTH所带的信息如下。 <br>
+IKE头部（明文）、加密部分：发起者身份（IDi）、发起者证书（Cert）、证书请求（CertReq）、发起方和应答者身份验证数据（AUTH）、响应者选择的Child SA转换（SAr2）、Child SA流量选择器。 <br>
+在IKEv2中支持签名认证、预共享密钥、EAP进行身份验证，采用什么样的方式进行认证就携带响应的信息。 <br>
+通过Cisco debug信息发现在IKE_AUTH中主要交换如下几个Payload。</p>
+
+<blockquote>
+  <p>*Mar 21 01:21:39.829: IKEv2:Construct Vendor Specific Payload: CISCO-GRANITE <br>
+  *Mar 21 01:21:39.833: IKEv2:Construct Notify Payload: INITIAL_CONTACT <br>
+  *Mar 21 01:21:39.833: IKEv2:Construct Notify Payload: SET_WINDOW_SIZE <br>
+  *Mar 21 01:21:39.837: IKEv2:Construct Notify Payload: ESP_TFC_NO_SUPPORT <br>
+  *Mar 21 01:21:39.841: IKEv2:Construct Notify Payload: NON_FIRST_FRAGS</p>
+</blockquote>
+
+<p>其中INITIAL_CONTACT Payload是用于标识对等体之间唯一的唯一的IKEv2会话以前任何会话现在都无效，应该被删除。当主机在IKE_AUTH交换机内发送INITIAL_CONTACT通知时执行初始联系，在认证成功之后需要检查和此对等体还有没有其他的IKEv2会话，如果有则删除，如果没有那么就断言最新的IKEv2 SA是双方当前唯一的IKEv2 SA。Payload是用于标识</p>
+
+<p>IKEv2中认证是一个大项，有很多东西不在此文档中展开，在此不再展开赘述，有兴趣的可以查阅“IKEv2 IPsec Virtual Private Networks Understanding and Deploying”当中有详细的介绍。</p>
+
+
+
+<h2 id="ike-sa-states">IKE SA states</h2>
+
+<p><img src="https://4.bp.blogspot.com/-LYog8X2vo9I/WNTlTGC7fyI/AAAAAAAAATM/KGo4oJ5RlpgQu18F--RXhCWuVIn-qVATQCLcB/s1600/Interpreting+IKEv2+IKE+SA+states.gif" alt="enter image description here" title=""></p>
+
+<p>因为在看debug信息的时候才会关注IKEv2中的状态，所以在此稍微说一下。</p>
+
+<p>发起者INIT状态表示IKE_SA_INIT请求尚未发送。 <br>
+应答方的INIT状态表示响应者正在处理从发起者接收到的IKE_SA_INIT请求。 <br>
+WAIT KE状态指示发起者已经发送了IKE_SA_INIT请求，并且正在等待来自响应者的IKE_SA_INIT响应。 <br>
+WAIT KE状态指示应答方已经处理了IKE_SA_INIT并正在等待来自发起者的IKE_AUTH请求。 <br>
+发起方的WAIT AUTH状态表示发起方发送了IKE_AUTH请求 <br>
+应答方的WAIT AUTH状态表示响应方已收到IKE_AUTH请求 <br>
+发起方的DONE状态表示启动器已经收到IKE_AUTH响应 <br>
+应答方的DONE状态表示响应者已经发送了IKE_AUTH响应</p>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li><p><a href="http://www.cisco.com/c/en/us/support/docs/security-vpn/ipsec-negotiation-ike-protocols/115936-understanding-ikev2-packet-exch-debug.html">IKEv2 Packet Exchange and Protocol Level Debugging</a></p></li>
+<li><p><a href="https://tools.ietf.org/html/rfc5996">RFC 5996</a></p></li>
+<li><p><a href="http://www.omnisecu.com/tcpip/ikev2-phase-1-and-phase-2-message-exchanges.php">IKEv2 Phase 1 (IKE SA) and Phase 2 (Child SA) Message Exchanges</a></p></li>
+<li><p><a href="http://www.cisco.com/c/en/us/support/docs/ip/internet-key-exchange-ike/115934-technote-ikev2-00.html">IOS IKEv2 Debugs for Site-to-Site VPN with PSKs Troubleshooting TechNote</a></p></li>
+<li><p><a href="https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.1.0/com.ibm.zos.v2r1.hald001/ike2sastate.htm">Interpreting IKEv2 IKE SA states</a></p></li>
+<li><p>IKEv2 IPsec Virtual Private Networks Understanding and Deploying <br>
+（因为版权问题，这个书没有办法直接上传分享出来，如果有兴趣查看的可以联系我 ccie43413@yahoo.com)</p></li>
+</ol></div></body>
+</html>
