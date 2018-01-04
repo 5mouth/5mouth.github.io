@@ -1,0 +1,319 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WLAN体系基本介绍 - 5mouth</title>
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="wlan体系基本介绍">WLAN体系基本介绍</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#wlan体系基本介绍">WLAN体系基本介绍</a><ul>
+<li><a href="#第一章-wlan基础概念">第一章 WLAN基础概念</a><ul>
+<li><a href="#wlan组成">WLAN组成</a></li>
+<li><a href="#wlan网络类型拓扑">WLAN网络类型，拓扑</a></li>
+<li><a href="#服务集概念">服务集概念</a></li>
+<li><a href="#80211体系">802.11体系</a></li>
+</ul>
+</li>
+<li><a href="#第二章-wlan射频技术">第二章 WLAN射频技术</a><ul>
+<li><a href="#射频技术相关信息">射频技术相关信息</a></li>
+<li><a href="#80211b与80211g的频段与信道划分">802.11b与802.11g的频段与信道划分</a></li>
+<li><a href="#80211a工作频段与信道划分">802.11a工作频段与信道划分</a></li>
+<li><a href="#信号强度">信号强度</a></li>
+<li><a href="#接收灵敏度">接收灵敏度</a></li>
+<li><a href="#信号的传送方式">信号的传送方式</a></li>
+<li><a href="#信号强度与速率的关系">信号强度与速率的关系</a></li>
+</ul>
+</li>
+<li><a href="#第三章-wlan数据转发工作原理">第三章 WLAN数据转发工作原理</a><ul>
+<li><a href="#无线转发工作原理">无线转发工作原理</a></li>
+</ul>
+</li>
+<li><a href="#第四章-常见无线元器件介绍">第四章 常见无线元器件介绍</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+
+
+<h2 id="第一章-wlan基础概念">第一章 WLAN基础概念</h2>
+
+<p>什么是WLAN？WLAN是 Wireless Local Area Network 的缩写，指应用无线通信技术将计算机设备互联起来，构成可以互相通信和实现资源共享的网络体系。针对有线局域网一些缺点：线路成本、移动性差等， 对于组网便捷性和移动性的要求，促成了WLAN的技术的诞生。 <br>
+什么是wifi?在IEEE正式发布标准之前，wifi联盟率先进行兼容性认证，经过了wifi认证操作完成之后通常IEEE的兼容性不会有太大问题。</p>
+
+<h3 id="wlan组成">WLAN组成</h3>
+
+<p>· Station（工作站）：支持802.11的终端设备。简称STA。PC，手机，PDA等 <br>
+· Access Point（AP，接入点）：为STA提供基于802.11的无线接入服务。同时将无线的802.11 mac帧格式转换为有线网络的帧。 <br>
+·Wireless Medium（无线媒介）：射频物理层（2.4GHz和5GHz）。红外物理层。目前广泛应用的是射频方式。 <br>
+·Distribution System（DS，分布式系统）：有线网络。通常指以太网。</p>
+
+
+
+<h3 id="wlan网络类型拓扑">WLAN网络类型，拓扑</h3>
+
+<p><strong>独立性网络(Independent Basic Service Set)</strong> <br>
+一般是由几个STA（终端设备）组成临时性网络，所有的STA地位平等，无任何中心控制节点。 <br>
+<img src="https://lh3.googleusercontent.com/-zUeemkg4XJ0/Wj89Cj5KtFI/AAAAAAAADUk/B4p9fWRGPMcqLc-9xZuId8tkiqqksW6qgCLcBGAs/s0/%25E5%25BE%25AE%25E4%25BF%25A1%25E5%259B%25BE%25E7%2589%2587_20171224133537.png" alt="enter image description here" title="微信图片_20171224133537.png"> <br>
+传输数据的时候直接是终端到终端之间进行传输，通常是临时性的网络。</p>
+
+<p><strong>基础结构型网络（Infrastructure Baisc Service Set）</strong> <br>
+需要AP提供接入服务，所有STA（终端）关联到AP上，访问外部以及STA之间交互的数据均由AP负责转发。 <br>
+<img src="https://lh3.googleusercontent.com/-9n1ZEpFg9eM/Wj89nyiB8zI/AAAAAAAADUw/nSGgN0B3kbMkk0EYsbxMmKBjEdyZOWfDQCLcBGAs/s0/%25E5%25BE%25AE%25E4%25BF%25A1%25E6%2588%25AA%25E5%259B%25BE_20171224133928.png" alt="enter image description here" title="微信截图_20171224133928.png"> <br>
+终端到终端通过AP进行转发。如果是通过无线到无线的转发方式，不需要进行数据帧的转换。</p>
+
+<h3 id="服务集概念">服务集概念</h3>
+
+<p>BSS（basic service set，基本服务集），是802.11网络提供服务的基本单元。在一个BSS的服务区域内（即射频信号覆盖的范围内），STA之间能够相互通信 <br>
+· 独立性网络(Independent Basic Service Set) <br>
+· 基础结构型网络（Infrastructure Baisc Service Set）</p>
+
+<p>SSID (service set identifier,服务集标识符)，用来标识BSS，标识一个WLAN网络。 <br>
+· BSSID:基本服务集标识符，AP的MAC地址，不可修改。 <br>
+· ESSID：扩展服务集标识符，通过AP广播出去，可修改。（无线网络设备的名称）</p>
+
+
+
+<h3 id="80211体系">802.11体系</h3>
+
+<pre><code>+------------++------------++---------------------------------------------------------------------------------+---------------
+|            ||            ||                                                                                 |Data Link Layer
+|    802     ||    801     ||                           802.2  Logical Link Control(LLC)                      | LLC(sublayer) 
+|            ||            ||                                                                                 |               
+|            ||            ||                                                                                 |               
+|            ||            |+---------------------------------------------------------------------------------+               
+|            ||            |                                                                                                  
+| Overview   ||            |+-------++-------++---------------------------------------------------------------+               
+|    and     || Management ||       ||       ||                                                               |               
+|Architecture||            || 802.3 || 802.5 ||                                                               |               
+|            ||            ||       ||       ||                         802.11 MAC                            |MAC Sublayer   
+|            ||            || MAC   || MAC   ||                                                               |               
+|            ||            ||       ||       ||                                                               |               
+|            ||            ||       ||       |+---------------------------------------------------------------+               
+|            ||            ||       ||       |                                                                                                                                                               
+|            ||            ||       ||       |+-----------++-----------++-----------++-----------++-----------+---------------
+|            ||            || 802.3 || 802.3 ||  802.11   ||  802.11   ||  802.11a  ||  802.11b  ||  802.11g  |Physical Layer 
+|            ||            || PHY   || PHY   ||           ||           ||           ||           ||           |               
+|            ||            ||       ||       || FHSS PHY  || DSSS PHY  || OFDM PHY  ||HR/DSSS PHY||  ERP PHY  |               
++------------++------------++-------++-------++-----------++-----------++-----------++-----------++-----------+               
+</code></pre>
+
+<p>802.3是载波侦听多路访问局域网的标准。 <br>
+802.4是令牌网的标准。 <br>
+802.5是令牌环(Token Ring) 的标准，定义了介质访问控制子层与物理层规范。 <br>
+802.11协议簇是国际电工电子工程学会（IEEE）为无线局域网络制定的标准。 <br>
+无线关注的是802.11。在无线网络环境中关系到802.11a ,802.11b ,802.11g ,802.11n 等…</p>
+
+<h2 id="第二章-wlan射频技术">第二章 WLAN射频技术</h2>
+
+
+
+<h3 id="射频技术相关信息">射频技术相关信息</h3>
+
+<table>
+<thead>
+<tr>
+  <th align="center"></th>
+  <th align="left">802.11</th>
+  <th align="left">802.11b</th>
+  <th align="left">802.11a</th>
+  <th align="left">802.11g</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td align="center">标准发布时间</td>
+  <td align="left">1997~7</td>
+  <td align="left">1997~9</td>
+  <td align="left">1997~9</td>
+  <td align="left">2003~7</td>
+</tr>
+<tr>
+  <td align="center">合法频宽</td>
+  <td align="left">83.5</td>
+  <td align="left">83.5</td>
+  <td align="left">325</td>
+  <td align="left">83.5</td>
+</tr>
+<tr>
+  <td align="center">频率范围</td>
+  <td align="left">2.4~4.4835Ghz</td>
+  <td align="left">2.4~4.4835Ghz</td>
+  <td align="left">5.150~5.350Ghz<br>5.725~5.850Ghz</td>
+  <td align="left">2.4~4.4835Ghz</td>
+</tr>
+<tr>
+  <td align="center">非重叠信道</td>
+  <td align="left">3</td>
+  <td align="left">3</td>
+  <td align="left">12</td>
+  <td align="left">3</td>
+</tr>
+<tr>
+  <td align="center">调制技术</td>
+  <td align="left">FHSS/DSSS</td>
+  <td align="left">CCK/DSSS</td>
+  <td align="left">OFDM</td>
+  <td align="left">CCK/OFDM</td>
+</tr>
+<tr>
+  <td align="center">物理发送速率</td>
+  <td align="left">1,2</td>
+  <td align="left">1,2,5.5,11</td>
+  <td align="left">6,9,12,18,24,36,48,54</td>
+  <td align="left">6,9,12,18,24,36,48,54</td>
+</tr>
+<tr>
+  <td align="center">兼容性</td>
+  <td align="left">N/A</td>
+  <td align="left">与11g产品互通</td>
+  <td align="left">与b/g不能互通</td>
+  <td align="left">与11b产品互通</td>
+</tr>
+</tbody></table>
+
+
+<p>802.11g 可与802.11b进行兼容。 <br>
+无线电波是在空气介质中进行转播的，早起通过无线波的相位变化来代表不同的二进制数，因此传播的效率比较低，带宽比较低。 <br>
+采用OFDM调制技术进行改善，在同一个频段中通过更多直载波，来提升传递信息的数据量，从而提升无线的带宽。除了变换相位来传递信息也通过变换振幅来提升信息传递的数据量。</p>
+
+
+
+<h3 id="80211b与80211g的频段与信道划分">802.11b与802.11g的频段与信道划分</h3>
+
+<p><img src="https://lh3.googleusercontent.com/-yYUkro-0kuo/Wk2XuQRxwZI/AAAAAAAADeM/gxfn-gDMVGQ77n1Ooo0BlRCzrJo3dm__wCLcBGAs/s0/%25E6%2597%25A0%25E7%25BA%25BF.PNG" alt="enter image description here" title="无线.PNG"> <br>
+工作的频率范围是2.4GHz~2.4835GHz。在此频率范围内又划分出14个信道。每个信道的中心频率相隔5MHz，每个信道可供占用的带宽为22MHz。 <br>
+如上图示channel 1的中心频率为2412MHz，channel 6的中心频率为2437MHz,channel 11的中心频率为2462MHz。3个信道理论上是不相干扰的信道。</p>
+
+<p>干扰：信道上的波发生干扰，波的叠加和抵消，对原有的数据进行了破坏。称之为干扰。想要避免干扰，需要尽量减少相交波。 <br>
+在进行项目实施的时候，尽量选择 1 ，6， 11的信道。 <br>
+若观察，发现2，7，12信道也是互相不干扰的，为什么不使用2，7，12信道？ <br>
+这个需要结合实际情况，因为有的终端设备不支持11以上的信道，那么会给客户带来使用上的困惑。其他信道同理。</p>
+
+
+
+<h3 id="80211a工作频段与信道划分">802.11a工作频段与信道划分</h3>
+
+<p>工作在5.8GHz频段的时候，中国wlan工作的频率范围是5.725GHz~5.850GHz。在此频率范围内又划分出5个信道。每个信道的中心频率相隔20MHz，如下图所示。其他地区的信道频段划分也附在下图。 <br>
+每个国家使用的802.11a的频道是不一样的，中国的情况使用的是IV（149~165信道范围）。 <br>
+完整的5G频段划分可以去<a href="https://drive.google.com/file/d/1nfkHEB9w_4HsabD6PjuXeNjBPD6vkRoQ/view?usp=sharing">这里</a>获得。</p>
+
+<p><img src="https://lh3.googleusercontent.com/-t0QbK7_MFdE/Wj9EUOZvwTI/AAAAAAAADWA/nIcGfVZdCU8DlhjuJM5oQZjA7aIVRedGgCLcBGAs/s0/4.png" alt="enter image description here" title="4.png"> <br>
+5G的信道的干扰会小，2.4的干扰源比较多。</p>
+
+
+
+<h3 id="信号强度">信号强度</h3>
+
+<p>某个AP标称功率为100mW，是指AP通过天线可以每秒辐射出100mW的能量。但在无线应用中，我们经常听到的功率单位是dBm而不是W或者mW。 <br>
+具体dBm和mW换算如下： <br>
+<strong>dBm to mW</strong> <br>
+<script type="math/tex; mode=display" id="MathJax-Element-1">P_{(mW)}=1mW·10^{(P(dBm)/10)}</script> <br>
+例如 <br>
+13dBm转换成mW: <br>
+<script type="math/tex; mode=display" id="MathJax-Element-2">P_{(mW)}=1mW·10^{(13dBm/10)}=19.95mW</script></p>
+
+<p><strong>mW to dBm</strong> <br>
+<script type="math/tex; mode=display" id="MathJax-Element-3">P_{(dBm)}=10·\log_{10}(p_{(mW)}/1mW)</script> <br>
+例如 <br>
+20mW 转换成 dBm: <br>
+<script type="math/tex; mode=display" id="MathJax-Element-4">P_{(dBm)}=10·\log_{10}(20mW/1mW)=13.0103 dBm</script></p>
+
+
+
+<h3 id="接收灵敏度">接收灵敏度</h3>
+
+<p>无线传输的接收灵敏度类似于人们沟通交谈时的听力， 即STA或AP解调出信号所要求的最低信号强度。 <br>
+一般来说AP的接收灵敏度为-85dBm，甚至达到-105dBm，而STA的接收灵敏度一般在-75dBm <br>
+WLAN的底噪（环境噪声）为-95dBm，因此信号强度如果低于-95dBm的话，这样的信号就等同于噪声。无法解调出相应的信息。</p>
+
+
+
+<h3 id="信号的传送方式">信号的传送方式</h3>
+
+<p>AP的无线信号传递主要通过两种方式，辐射和传导。 <br>
+AP无线信号辐射是指AP的信号通过天线将信号传递到空气中去，如下图左所示。 <br>
+AP无线信号的传导是指无线信号在线缆等介质内进行无线信号传递，如右图室分系统中的无线信号通过1/2“线缆传递。</p>
+
+<p>辐射：通过天线将信息发送出去 <br>
+传导：通过馈线将无线信息在馈线里面发送出去到其他的无线接入点上。</p>
+
+
+
+<h3 id="信号强度与速率的关系">信号强度与速率的关系</h3>
+
+<p>无线信号以无线电波的方式在空间中扩散，随着距离的增大，信号强度会逐渐衰减，这就意味着靠近发送源，信号强度越大。因此只有在靠近发送源的地方才能获得更大的速率 <br>
+<strong>信号衰减</strong> <br>
+地板衰减：  30db <br>
+承重墙衰减：20-40db <br>
+砖墙：  10db <br>
+学生宿舍窗户（10mm）：   3db <br>
+人体： 3db <br>
+空旷走廊：30dB/50m</p>
+
+<p>下图数据参考<a href="https://www.isa.org/standards-and-publications/isa-publications/intech-magazine/2008/april/special-section-wireless-tracking-wireless/">这里</a>。 <br>
+<img src="https://lh3.googleusercontent.com/-CNBXnq0CKFI/Wk3dy_mzXYI/AAAAAAAADfA/y18GcCM4v8IjKpa_0oMgjG77b6Vsiyu8ACLcBGAs/s0/2008_04_53%25281%2529.gif" alt="enter image description here" title="2008_04_53(1).gif"></p>
+
+<h2 id="第三章-wlan数据转发工作原理">第三章 WLAN数据转发工作原理</h2>
+
+
+
+<h3 id="无线转发工作原理">无线转发工作原理</h3>
+
+<p>无线转发工作原理还是依据CSMA/CA，及载波监听多路访问，冲突避免。 <br>
+1. 送出数据前，监听媒体状态，等没有人使用媒体，维持一段时间后，再等待一段随机的时间后依然没有人使用，才送出数据。由于每个设备采用的随机时间不同，所以可以减少冲突的机会。  <br>
+2. 送出数据前，先送一段小小的请求传送报文(RTS : Request to Send)给目标端，等待目标端回应 CTS: Clear to Send 报文后，才开始传送。 利用RTS-CTS握手(handshake)程序，确保接下来传送资料时，不会被碰撞。 同时由於RTS-CTS封包都很小，让传送的无效开销变小。 </p>
+
+<p>WLAN采用半双工通信机制，同一个区域内，只能一个设备发包。 <br>
+WLAN设备使用冲突检测与退避机制来应对无线环境中的干扰。避免由于同频信号重叠导致无法解调。</p>
+
+
+
+<h2 id="第四章-常见无线元器件介绍">第四章 常见无线元器件介绍</h2>
+
+<p><strong>全向天线</strong> <br>
+全向天线，即在水平方向图上表现为360°都均匀辐射，也就是平常所说的无方向性，在垂直方向图上表现为有一定宽度的波束，一般情况下波瓣宽度越小，增益越大。全向天线在通信系统中一般应用距离近，覆盖范围大。通常在吸顶天线或者AP上出现。全向天线的辐射范围比较象一个苹果。  <br>
+<img src="https://lh3.googleusercontent.com/-1vAkYVjZqYw/Wj9NyeopBKI/AAAAAAAADWw/3SfL3dsfsHEd7lmW9cdDTrU8VGwp8s9pACLcBGAs/s0/6.png" alt="enter image description here" title="6.png"></p>
+
+<p><strong>定向天线</strong> <br>
+定向天线，在水平方向图上表现为一定角度范围辐射，也就是平常所说的有方向性。同全向天线一样，波瓣宽度越小，增益越大。定向天线在通信系统中一般应用于通信距离远，覆盖范围小，目标密度大，频率利用率高的环境。定向天线的主要辐射范围象个倒立的不太完整的圆锥。  <br>
+<img src="https://lh3.googleusercontent.com/-qGX485SqC3c/Wj9PGWdf1tI/AAAAAAAADXA/OVbB81jHEfYMQ6omOINxU5W3Rgjbx8uYgCLcBGAs/s0/7.png" alt="enter image description here" title="7.png"></p>
+
+<p><strong>室外天线（全向天线）</strong> <br>
+<img src="https://lh3.googleusercontent.com/-0coucFt0HFE/Wj9PrXOfT7I/AAAAAAAADXM/4cxpeLmoNvEOIp_5jqm8NoJDLMupPZnZwCLcBGAs/s0/8.png" alt="enter image description here" title="8.png"></p>
+
+<p><strong>室外天线（定向板状天线）</strong> <br>
+空旷地区覆盖 <br>
+<img src="https://lh3.googleusercontent.com/-0ZDUxLmKX4M/Wj9QGjc7eLI/AAAAAAAADXY/pFUgnZqGSlMutXVlDNcvA1JK-LXdQbOxACLcBGAs/s0/9.png" alt="enter image description here" title="9.png"></p>
+
+<p><strong>室外天线（抛物面天线）</strong> <br>
+<img src="https://lh3.googleusercontent.com/-awL8M_d-nLU/Wj9QmWNIHGI/AAAAAAAADXk/LQwAEeCuelMwEeqzEroYVDRQw6SYPQ6NQCLcBGAs/s0/10.png" alt="enter image description here" title="10.png"></p>
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li><a href="http://www.ruijie.com.cn/fw/zxpx/59833">锐捷WLAN体系基本知识介绍</a></li>
+<li><a href="https://www.rapidtables.com/convert/power/mW_to_dBm.html">mW to dBm Conversion</a></li>
+<li><a href="https://www.rapidtables.com/convert/power/dBm_to_mW.html">dBm to mW Conversion</a></li>
+<li><a href="https://www.isa.org/standards-and-publications/isa-publications/intech-magazine/2008/april/special-section-wireless-tracking-wireless/">Special Section: Wireless: Tracking wireless</a></li>
+<li><a href="https://en.wikipedia.org/wiki/List_of_WLAN_channels">List of WLAN channels - Wikipedia</a></li>
+</ol></div></body>
+</html>
