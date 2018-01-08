@@ -1,0 +1,141 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>使用Wireshark合并数据包，删除重复数据包，IP地址冲突检测 - 5mouth</title>
+
+<center><hr noshade width=550></center>
+<center>
+<img src="/logo.jpg"  alt="I am neither especially clever nor especially gifted.I am only very, very curious." />
+<h1><center><A HREF="https://5mouth.github.io"> 5mouth Archive Project </a> </center><br>
+<font size="5" ><center>Stay Hungry · Stay Foolish</center></font>
+</center>
+<center><hr noshade width=550></center>
+</h1>
+<br>
+<br>
+
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="使用wireshark合并数据包删除重复数据包ip地址冲突检测">使用Wireshark合并数据包，删除重复数据包，IP地址冲突检测</h1>
+
+<p><div class="toc">
+<ul>
+<li><a href="#使用wireshark合并数据包删除重复数据包ip地址冲突检测">使用Wireshark合并数据包，删除重复数据包，IP地址冲突检测</a><ul>
+<li><a href="#合并数据包">合并数据包</a><ul>
+<li><a href="#方法1">方法1</a></li>
+<li><a href="#方法2">方法2</a></li>
+</ul>
+</li>
+<li><a href="#删除重复数据包">删除重复数据包</a></li>
+<li><a href="#ip地址冲突检测">IP地址冲突检测</a></li>
+<li><a href="#参考文献">参考文献</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</p>
+
+<h2 id="合并数据包">合并数据包</h2>
+
+
+
+<h3 id="方法1">方法1</h3>
+
+<p>GUI方式 <br>
+1. 打开Wireshark软件打开数据包 1.pcap <br>
+2. 点击<strong>文件</strong>—&gt;<strong>合并(M)</strong> 选择要合并的数据包文件。例如2.pcap <br>
+3. 点击完成之后即可完成合并</p>
+
+<p>如果想要继续合并 3.pcap，那么需要先保存之前合并的文件，才可用同样的方法合并后续的文件，以此类推。</p>
+
+<p>如果您需要合并大量的数据包文件，请使用方法2。</p>
+
+<h3 id="方法2">方法2</h3>
+
+<p>Mergecap方式</p>
+
+<ol>
+<li><p>进入到Wireshark安装目录</p>
+
+<p>C:\Users\win7&gt;cd C:\Program Files\Wireshark</p></li>
+<li><p>将要合并的抓包文件放在安装目录下（使用绝对路径原理相同，只是这样方便说明）</p></li>
+<li><p>合并抓包文件</p></li>
+</ol>
+
+<p>aaa.pcap ——&gt;合并后的输出文件名 <br>
+*.pcap———&gt; 目录下所有的pcap文件</p>
+
+<pre><code>C:\Program Files\Wireshark&gt;mergecap -w aaa.pcap *.pcap
+</code></pre>
+
+<p>当然如果你并不想所有文件都合并，可以使用如下方式来完成</p>
+
+<pre><code>C:\Program Files\Wireshark&gt;mergecap -w aaa.pcap 1.pcap 2.pcap
+</code></pre>
+
+<h2 id="删除重复数据包">删除重复数据包</h2>
+
+<p>在实际抓包环境中可能会抓到很多重复的数据包，例如如下：</p>
+
+<pre><code>00:00:00:00:00:01 ff:ff:ff:ff:ff:ff ARP 64 Who has 1.1.121.46? Tell 1.1.100.7
+00:00:00:00:00:01 ff:ff:ff:ff:ff:ff ARP 64 Who has 1.1.122.46? Tell 1.1.100.7
+00:00:00:00:00:01 ff:ff:ff:ff:ff:ff ARP 64 Who has 1.1.123.46? Tell 1.1.100.7
+00:00:00:00:00:01 ff:ff:ff:ff:ff:ff ARP 64 Who has 1.1.124.46? Tell 1.1.100.7
+</code></pre>
+
+<p>可以通过如下方式来删除这些重复的数据包</p>
+
+<p>步骤1，打开CMD，并且进入到Wireshark的安装目录下</p>
+
+<pre><code>C:\Users\win7&gt;cd C:\Program Files\Wireshark
+</code></pre>
+
+<p>步骤2，把抓包文件放在Wireshark的安装目录下</p>
+
+<pre><code>如：C:\Program Files\Wireshark
+</code></pre>
+
+<p>步骤3，使用editcap -d的参数来删除重复的数据包，前面的文件名是数据包源文件名，后面的文件名是数据包输出的文件名</p>
+
+<pre><code>C:\Program Files\Wireshark&gt;editcap -d input.pcap output.pcap
+ 655 packets seen, 78 packets skipped with duplicate window of 5 packets.
+</code></pre>
+
+<h2 id="ip地址冲突检测">IP地址冲突检测</h2>
+
+<p>例如，如下一组报文</p>
+
+<pre><code>00:00:00:00:00:01   00:00:01:00:00:01   ARP   1.1.1.1 is at 00:00:00:00:00:01
+00:00:00:00:00:02   00:00:01:00:00:01   ARP   1.1.1.1 is at 00:00:00:00:00:02
+aa:00:00:00:00:01   00:00:01:00:00:01   ARP   1.1.1.100 is at aa:00:00:00:00:01
+00:00:00:00:00:01   00:00:01:00:00:01   ARP   1.1.1.1 is at 00:00:00:00:00:01
+00:00:00:00:00:02   00:00:01:00:00:01   ARP   1.1.1.1 is at 00:00:00:00:00:02
+aa:00:00:00:00:02   00:00:01:00:00:01   ARP   1.1.1.101 is at aa:00:00:00:00:02
+00:00:00:00:00:01   00:00:01:00:00:01   ARP   1.1.1.1 is at 00:00:00:00:00:01
+00:00:00:00:00:02   00:00:01:00:00:01   ARP   1.1.1.1 is at 00:00:00:00:00:02
+aa:00:00:00:00:03   00:00:01:00:00:01   ARP   1.1.1.102 is at aa:00:00:00:00:03
+00:00:00:00:00:01   00:00:01:00:00:01   ARP   1.1.1.1 is at 00:00:00:00:00:01
+</code></pre>
+
+<p>如果想要检查IP地址冲突的情况可以在 过滤器中输入 <strong>arp.duplicate-address-frame</strong> 就可以列出地址冲突的列表，方便排查问题</p>
+
+<p>输出结果如下：</p>
+
+<pre><code>00:00:00:00:00:02   00:00:01:00:00:01   ARP   1.1.1.1 is at 00:00:00:00:00:02
+00:00:00:00:00:02   00:00:01:00:00:01   ARP   1.1.1.1 is at 00:00:00:00:00:02
+00:00:00:00:00:02   00:00:01:00:00:01   ARP   1.1.1.1 is at 00:00:00:00:00:02
+</code></pre>
+
+
+
+<h2 id="参考文献">参考文献</h2>
+
+<ol>
+<li><p><a href="https://www.wireshark.org/docs/wsug_html_chunked/ChIOMergeSection.html#ChIOMergeDialog">Merging capture files</a></p></li>
+<li><p><a href="https://www.wireshark.org/docs/man-pages/mergecap.html">mergecap</a> </p></li>
+<li><p><a href="https://www.wireshark.org/docs/man-pages/editcap.html">editcap</a> </p></li>
+</ol></div></body>
+</html>
